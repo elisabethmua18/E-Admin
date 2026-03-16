@@ -1,0 +1,27 @@
+{
+    "profile": {
+        "nama_bisnis": "Elisabeth MUA & Hairstylist",
+        "alamat": "Pudak Payung, Semarang",
+        "hp": "085713944289",
+        "ig": "@elisabethmua.id",
+        "pembayaran": "BCA 4260445991",
+        "tnc": "DP No Refund",
+        "ttd": "Elisabeth"
+    },
+    "master_layanan": {
+        "Makeup Wisuda + Hijabdo": 250000
+    },
+    "bookings": [
+        {
+            "nama": "Sinta",
+            "lokasi": "Hotel Padma",
+            "tgl": "01/04/2026",
+            "jam": "02.00-04.00",
+            "otw": "04:30",
+            "paket": "Makeup Wisuda + Hijabdo",
+            "qty": 1,
+            "hire_tim": true,
+            "tim_type": "Hijabdo"
+        }
+    ]
+}

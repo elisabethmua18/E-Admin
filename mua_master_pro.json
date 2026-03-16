@@ -1,0 +1,33 @@
+{
+    "profile": {
+        "nama": "Elisabeth MUA",
+        "alamat": "Pudak Payung",
+        "hp": "085713944289",
+        "ig": "elisabethmua.id",
+        "logo_url": "https://cdn-icons-png.flaticon.com/512/3163/3163213.png"
+    },
+    "faktur_settings": {
+        "tnc": "1. DP Bersifat No Refund\n2. Cancel dari pihak klien DP hangus\n3. Reschedule maksimal H-3\n4. Reschedule diluar ketentuan dianggap klien membatalkan\n5. pelunasan maksimal hari H",
+        "bank": "BCA",
+        "no_rek": "4260445991",
+        "an": "Elisabeth Febri Astuti",
+        "signature": "Elisabeth MUA & Hairstylist",
+        "next_inv": 5
+    },
+    "master_layanan": {
+        "makeup wisuda+ hairdo": 300000,
+        "makeup wisuda+ hijabdo": 250000,
+        "makeup pendamping wisuda+ hijabdo": 200000,
+        "makeup pendamping wisuda+ hairdo": 250000,
+        "ongkir": 25000
+    },
+    "bookings": [],
+    "pengeluaran": [
+        {
+            "ket": "bedak YOU",
+            "nominal": 120000,
+            "bulan": "03",
+            "tahun": "2026"
+        }
+    ]
+}
