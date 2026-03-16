@@ -1,164 +1,118 @@
 import streamlit as st
 import json
 import os
-import pandas as pd
 from datetime import datetime
 
-# --- CONFIG ---
-st.set_page_config(page_title="E-Admin MUA - Elisabeth", page_icon="💄")
+# --- SETTING DASAR ---
+st.set_page_config(page_title="E-Admin MUA - Elisabeth", layout="centered")
 
-# --- DATABASE LOGIC ---
-DATA_FILE = "mua_master_pro.json"
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return {
-        "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "logo_url": ""},
-        "faktur_settings": {"tnc": "", "bank": "", "no_rek": "", "an": "", "signature": "", "next_inv": 1},
-        "master_layanan": {}, "bookings": [], "pengeluaran": []
-    }
-
-if 'db' not in st.session_state:
-    st.session_state.db = load_data()
-
-def save_data():
-    with open(DATA_FILE, "w") as f:
-        json.dump(st.session_state.db, f, indent=4)
-
-# --- LOGIN SESSION ---
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-# --- UI STYLE ---
+# --- WARNA PINK KHAS ELIS ---
 st.markdown("""
     <style>
-    .main { background-color: #F8C8DC; }
-    .stButton>button { width: 100%; border-radius: 10px; }
+    .stApp { background-color: #F8C8DC; }
+    div.stButton > button {
+        background-color: #F19CBB; color: white;
+        border-radius: 10px; height: 3em; width: 100%;
+        border: none; font-weight: bold;
+    }
+    .job-card {
+        background-color: white; padding: 15px;
+        border-radius: 15px; margin-bottom: 10px;
+        border-left: 5px solid #F19CBB;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOGIN PAGE ---
-if not st.session_state.logged_in:
-    st.title("💄 E-Admin Login")
-    email = st.text_input("Email", value="elisabeth@mua.id")
-    password = st.text_input("Password", type="password", help="Elis5173")
+# --- DATABASE ---
+DATA_FILE = "mua_master_pro.json"
+def load_db():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f: return json.load(f)
+    return {"profile": {"nama": "Elisabeth MUA"}, "master_layanan": {}, "bookings": [], "faktur_settings": {"next_inv": 1}}
+
+if 'db' not in st.session_state:
+    st.session_state.db = load_db()
+
+def save_db():
+    with open(DATA_FILE, "w") as f: json.dump(st.session_state.db, f, indent=4)
+
+# --- LOGIN ---
+if 'login' not in st.session_state: st.session_state.login = False
+
+if not st.session_state.login:
+    st.title("🔐 LOGIN E-ADMIN")
+    user = st.text_input("Email", "elisabeth@mua.id")
+    pw = st.text_input("Password", type="password")
     if st.button("MASUK"):
-        if email == "elisabeth@mua.id" and password == "Elis5173":
-            st.session_state.logged_in = True
+        if user == "elisabeth@mua.id" and pw == "Elis5173":
+            st.session_state.login = True
             st.rerun()
-        else:
-            st.error("Email atau Password salah!")
+        else: st.error("Salah!")
     st.stop()
 
-# --- SIDEBAR NAVIGASI ---
-menu = st.sidebar.radio("Navigasi", ["Dashboard", "Input Jadwal", "Layanan", "Profil & Setting", "Keuangan (NETT)"])
+# --- NAVIGASI ---
+menu = st.sidebar.selectbox("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL", "PENGHASILAN"])
 
-# --- DASHBOARD ---
-if menu == "Dashboard":
-    st.title(f"🌸 Dashboard {st.session_state.db['profile']['nama']}")
+if menu == "BERANDA":
+    st.header(f"🌸 Dashboard: {st.session_state.db['profile']['nama']}")
     
     col1, col2 = st.columns(2)
-    tgl_start = col1.date_input("Dari Tanggal", datetime.now())
-    tgl_end = col2.date_input("Sampai Tanggal", datetime.now())
-
-    if st.button("Hapus Job Massal (Rentang di atas)", type="secondary"):
-        st.session_state.db['bookings'] = [b for b in st.session_state.db['bookings'] if not (tgl_start.strftime("%d/%m/%Y") <= b['tgl'] <= tgl_end.strftime("%d/%m/%Y"))]
-        save_data()
-        st.success("Data berhasil dibersihkan")
-        st.rerun()
-
+    d1 = col1.date_input("Dari", datetime.now())
+    d2 = col2.date_input("Sampai", datetime.now())
+    
     st.divider()
     
     for idx, b in enumerate(st.session_state.db['bookings']):
-        b_tgl_dt = datetime.strptime(b['tgl'], "%d/%m/%Y").date()
-        if tgl_start <= b_tgl_dt <= tgl_end:
-            status = "✅ LUNAS" if b.get('status') == "SELESAI" else "⏳ PENDING"
+        tgl_b = datetime.strptime(b['tgl'], "%d/%m/%Y").date()
+        if d1 <= tgl_b <= d2:
             with st.container():
-                st.subheader(f"{b['jam_ready']} | {b['nama']}")
-                st.text(f"Lokasi: {b['alamat_mu']} | Status: {status}")
+                st.markdown(f"""
+                <div class="job-card">
+                    <b style="color:blue; font-size:18px;">{b['jam_ready']}</b><br>
+                    <b>{b['nama']}</b> {'[LUNAS]' if b.get('status') == 'SELESAI' else ''}<br>
+                    <small>{b['tgl']} | {b['paket_list'][0]['nama']}</small><br>
+                    <i style="color:grey; font-size:12px;">--- [ OTW ] {b['otw']} ---</i>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 c1, c2, c3 = st.columns(3)
                 if b.get('status') != "SELESAI":
-                    if c1.button("Set LUNAS", key=f"lns_{idx}"):
+                    if c1.button("LUNAS", key=f"l{idx}"):
                         st.session_state.db['bookings'][idx]['status'] = "SELESAI"
-                        save_data(); st.rerun()
-                if c2.button("Detail Faktur", key=f"fkt_{idx}"):
-                    st.session_state.current_faktur = b
-                    st.info(f"Faktur #{b['inv_no']} untuk {b['nama']} siap dicetak.")
-                if c3.button("Hapus", key=f"del_{idx}"):
+                        save_db(); st.rerun()
+                if c2.button("FAKTUR", key=f"f{idx}"):
+                    st.info(f"Faktur {b['inv_no']} siap cetak (Fitur ini akan muncul di update selanjutnya)")
+                if c3.button("HAPUS", key=f"h{idx}"):
                     st.session_state.db['bookings'].pop(idx)
-                    save_data(); st.rerun()
-                st.caption(f"--- OTW Lokasi Berikutnya: {b['otw']} ---")
+                    save_db(); st.rerun()
 
-# --- INPUT JADWAL ---
-elif menu == "Input Jadwal":
-    st.title("📝 Input Jadwal Baru")
-    with st.form("input_form"):
+elif menu == "INPUT JADWAL":
+    st.header("📝 Tambah Jadwal")
+    with st.form("in"):
         nama = st.text_input("Nama Klien")
-        wa = st.text_input("WhatsApp Klien")
-        lokasi = st.text_input("Alamat Lokasi")
-        tgl = st.date_input("Tanggal", datetime.now())
-        jam = st.text_input("Jam Mulai-Selesai", "08:00-10:00")
-        otw = st.text_input("Info OTW", "07:00 (30m)")
-        dp = st.number_input("Jumlah DP", min_value=0)
-        paket = st.selectbox("Pilih Paket", list(st.session_state.db['master_layanan'].keys()) if st.session_state.db['master_layanan'] else ["Default"])
-        
-        submitted = st.form_submit_state = st.form_submit_button("SIMPAN JADWAL")
-        if submitted:
-            new_booking = {
-                "inv_no": f"INV{st.session_state.db['faktur_settings']['next_inv']:04d}",
-                "nama": nama, "wa": wa, "alamat_mu": lokasi, "tgl": tgl.strftime("%d/%m/%Y"),
-                "jam_ready": jam, "otw": otw, "dp": dp,
-                "paket_list": [{"nama": paket, "qty": 1, "price": st.session_state.db['master_layanan'].get(paket, 0)}],
-                "manual_list": [], "status": "PENDING"
-            }
-            st.session_state.db['bookings'].append(new_booking)
-            st.session_state.db['faktur_settings']['next_inv'] += 1
-            save_data()
-            st.success("Jadwal tersimpan!")
+        lokasi = st.text_input("Lokasi")
+        tgl = st.date_input("Tanggal")
+        jam = st.text_input("Jam (Mulai-Selesai)", "08:00-10:00")
+        otw = st.text_input("OTW", "07:00 (30m)")
+        dp = st.number_input("DP", 0)
+        layanan = st.selectbox("Paket", list(st.session_state.db['master_layanan'].keys()) if st.session_state.db['master_layanan'] else ["Default"])
+        if st.form_submit_button("SIMPAN JADWAL"):
+            new = {"inv_no": f"INV{st.session_state.db['faktur_settings'].get('next_inv', 1):04d}", "nama": nama, "alamat_mu": lokasi, "tgl": tgl.strftime("%d/%m/%Y"), "jam_ready": jam, "otw": otw, "dp": dp, "paket_list": [{"nama": layanan, "price": st.session_state.db['master_layanan'].get(layanan, 0)}], "status": "PENDING"}
+            st.session_state.db['bookings'].append(new)
+            st.session_state.db['faktur_settings']['next_inv'] = st.session_state.db['faktur_settings'].get('next_inv', 1) + 1
+            save_db(); st.success("Tersimpan!"); st.rerun()
 
-# --- KEUANGAN ---
-elif menu == "Keuangan (NETT)":
-    st.title("💰 Laporan Keuangan")
-    bln = st.selectbox("Bulan", [f"{i:02d}" for i in range(1, 13)], index=int(datetime.now().month)-1)
-    thn = st.selectbox("Tahun", ["2025", "2026"], index=1)
-    
-    omset = 0
-    for b in st.session_state.db['bookings']:
-        if b['tgl'].split("/")[1] == bln and b['tgl'].split("/")[2] == thn:
-            total_inv = sum([p['price'] for p in b['paket_list']])
-            omset += total_inv if b.get('status') == "SELESAI" else b['dp']
-    
-    exp = sum([x['nominal'] for x in st.session_state.db['pengeluaran'] if x['bulan'] == bln and x['tahun'] == thn])
-    
-    st.metric("Total Omset (Selesai + DP)", f"Rp {omset:,}")
-    st.metric("Total Pengeluaran", f"Rp {exp:,}")
-    st.metric("NETT PROFIT", f"Rp {omset-exp:,}")
-    
-    st.divider()
-    with st.expander("Input Pengeluaran Baru"):
-        ket = st.text_input("Keterangan")
-        nom = st.number_input("Nominal", min_value=0)
-        if st.button("Tambah Pengeluaran"):
-            st.session_state.db['pengeluaran'].append({"ket": ket, "nominal": nom, "bulan": bln, "tahun": thn})
-            save_data(); st.rerun()
+# --- BAGIAN LAINNYA ---
+elif menu == "LAYANAN":
+    st.header("💄 Master Layanan")
+    n = st.text_input("Nama Paket")
+    h = st.number_input("Harga", 0)
+    if st.button("TAMBAH"):
+        st.session_state.db['master_layanan'][n] = h
+        save_db(); st.rerun()
+    st.write(st.session_state.db['master_layanan'])
 
-# --- PROFIL ---
-elif menu == "Profil & Setting":
-    st.title("⚙️ Pengaturan")
-    st.session_state.db['profile']['nama'] = st.text_input("Nama MUA", st.session_state.db['profile']['nama'])
-    st.session_state.db['profile']['hp'] = st.text_input("No HP", st.session_state.db['profile']['hp'])
-    st.session_state.db['faktur_settings']['no_rek'] = st.text_input("No Rekening", st.session_state.db['faktur_settings']['no_rek'])
-    if st.button("SIMPAN PERUBAHAN"):
-        save_data(); st.success("Tersimpan!")
-
-# --- LAYANAN ---
-elif menu == "Layanan":
-    st.title("💄 Master Layanan")
-    n_pkt = st.text_input("Nama Paket Baru")
-    h_pkt = st.number_input("Harga", min_value=0)
-    if st.button("Tambah Paket"):
-        st.session_state.db['master_layanan'][n_pkt] = h_pkt
-        save_data(); st.rerun()
-    st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
+elif menu == "PROFIL":
+    st.header("👤 Profil MUA")
+    st.session_state.db['profile']['nama'] = st.text_input("Nama Bisnis", st.session_state.db['profile']['nama'])
+    if st.button("SIMPAN"): save_db(); st.success("Ok!")
