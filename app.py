@@ -105,9 +105,9 @@ if menu == "BERANDA":
 </h3>
 
 <p style="margin:5px 0;">
-<b>Tim:</b> {b.get('tim','-')} 
+<b>Tim:</b> {b.get('jenis_tim','-')} 
 | 
-<b>Jenis:</b> {b.get('jenis_tim','-')}
+<b>Anggota:</b> {b.get('anggota_tim','-')}
 </p>
 
 <p style="margin:5px 0;">
