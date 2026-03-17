@@ -23,7 +23,6 @@ st.markdown("""
     .faktur-box {
         background-color: white; padding: 30px; border: 1px solid #eee; border-radius: 10px;
         color: black; line-height: 1.5; font-family: 'Arial', sans-serif; position: relative;
-        margin-top: 20px;
     }
     .stempel-lunas {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
@@ -36,34 +35,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- SISTEM LOGIN ---
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-def login_page():
-    st.markdown("<h2 style='text-align: center; color: #F19CBB;'>🌸 Login E-Admin MUA 🌸</h2>", unsafe_allow_html=True)
-    with st.container():
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        if st.button("LOGIN"):
-            if email == "elisabethmua18@gmail.com" and password == "Elis5173":
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("Email atau Password salah!")
-
-if not st.session_state.logged_in:
-    login_page()
-    st.stop()
-
 # --- SISTEM DATABASE ---
 DATA_FILE = "mua_master_pro.json"
 
 def load_data():
-    initial_bookings = []
+    initial_bookings = [
+        {"inv_no": "INV0005", "nama": "Kak Angel", "tgl": "17/03/2026", "wa": "08xxxx", "alamat_mu": "Tembalang", "jam_ready": "14:00-16:00", "jam_otw": "16:15", "durasi_otw": 15, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Selly", "dp": 0, "status": "PENDING"},
+        {"inv_no": "INV0006", "nama": "Kak Reyki", "tgl": "17/03/2026", "wa": "08xxxx", "alamat_mu": "Hotel Aruman", "jam_ready": "13:00-15:00", "jam_otw": "12:15", "durasi_otw": 30, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Ovie", "dp": 0, "status": "PENDING"}
+    ]
     defaults = {
         "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": ""},
-        "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 1},
+        "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 7},
         "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": []
     }
     if os.path.exists(DATA_FILE):
@@ -85,14 +67,11 @@ def save_data():
 
 # --- MENU ---
 menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
-if st.sidebar.button("LOGOUT"):
-    st.session_state.logged_in = False
-    st.rerun()
 
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
-    selected_date = st.date_input("Pilih Tanggal", value=date.today())
+    selected_date = st.date_input("Pilih Tanggal", value=date(2026, 3, 17))
     st.divider()
     
     selected_str = selected_date.strftime("%d/%m/%Y")
@@ -119,7 +98,7 @@ if menu == "BERANDA":
                     st.session_state.edit_data = b
                     st.session_state.input_pakets = b.get('paket_list', [])
                     st.session_state.input_manuals = b.get('manual_list', [])
-                    st.warning("Data dimuat! Silakan buka menu 'INPUT JADWAL'")
+                    st.warning("Data dimuat! Silakan klik tab 'INPUT JADWAL'")
                 
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
@@ -134,26 +113,4 @@ if menu == "BERANDA":
         s = st.session_state.db['faktur_settings']
         
         logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px; position: absolute; left: 10px; top: 10px;">' if p.get('logo_base64') else ""
-        stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
-        
-        total_p = sum([(item.get('price',0) * item.get('qty',1)) for item in f.get('paket_list', [])])
-        total_m = sum([(item.get('harga',0) * item.get('qty',1)) for item in f.get('manual_list', [])])
-        total_semua = total_p + total_m
-        dp_val = f.get('dp', 0)
-        sisa = total_semua - dp_val
-
-        tnc_rapi = s.get('tnc','').replace('\n', '<br>')
-
-        nota_html = f"""
-        <div class="faktur-box">
-            {stempel}
-            <div style="position: relative; min-height: 100px; padding-left: 90px;">
-                {logo_html}
-                <div style="text-align: center;">
-                    <h2 style="margin:0; color:#F19CBB;">{p.get('nama','')}</h2>
-                    <p style="margin:0; font-size:12px;">{p.get('alamat','')}<br>WA: {p.get('hp','')} | IG: {p.get('ig','')}</p>
-                </div>
-            </div>
-            <hr style="border: 1px solid #eee;">
-            <p><b>INVOICE #{f.get('inv_no','')}</b></p>
-            <table style
+        stempel = '<div class="stempel-lunas">LUNAS</div>' if f
