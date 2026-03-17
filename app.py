@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import os
 import pandas as pd
@@ -117,7 +118,6 @@ if menu == "BERANDA":
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
-  import streamlit.components.v1 as components
 
 if 'current_faktur' in st.session_state:
     f = st.session_state.current_faktur
@@ -207,6 +207,7 @@ if 'current_faktur' in st.session_state:
         if st.button("❌ TUTUP"):
             del st.session_state.current_faktur
             st.rerun()
+            
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah / Edit Jadwal")
