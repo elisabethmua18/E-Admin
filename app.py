@@ -46,7 +46,7 @@ def load_data():
     defaults = {
         "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": ""},
         "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 7},
-        "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": []
+        "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": [], "pemasukan_lain": []
     }
     if os.path.exists(DATA_FILE):
         try:
@@ -110,12 +110,10 @@ if menu == "BERANDA":
                     st.session_state.edit_data = b
                     st.session_state.input_pakets = b.get('paket_list', [])
                     st.session_state.input_manuals = b.get('manual_list', [])
-                    st.warning(f"Data {b['nama']} dimuat! Silakan klik 'INPUT JADWAL'")
-                
+                    st.warning(f"Data {b['nama']} dimuat! Buka menu INPUT JADWAL")
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
                     save_data(); st.rerun()
-                
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
@@ -133,7 +131,6 @@ if menu == "BERANDA":
         total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
         dp_val = float(f.get('dp', 0))
-        
         sisa_teks = f"Rp {total_semua - dp_val:,}"
         if f.get('status') == "SELESAI (LUNAS)":
             sisa_teks = f"<span style='color:green;'>LUNAS HARI H (Rp {total_semua - dp_val:,})</span>"
@@ -175,7 +172,7 @@ if menu == "BERANDA":
             <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s['signature']}</b></p></div>
         </div>"""
         st.markdown(nota_html, unsafe_allow_html=True)
-        st.download_button(label="💾 DOWNLOAD NOTA", data=f"<html><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
+        st.download_button(label="💾 DOWNLOAD NOTA", data=f"<html><head><meta charset='UTF-8'></head><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
         if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
             # --- 2. INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
@@ -213,8 +210,8 @@ elif menu == "INPUT JADWAL":
         for j, item_m in enumerate(st.session_state.input_manuals):
             cm1, cm2, cm3, cm4 = st.columns([2, 1, 1, 0.5])
             item_m['nama'] = cm1.text_input("Keterangan", key=f"m_nama_{j}", value=item_m.get('nama',''))
-            item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m.get('harga', 0))
-            item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m.get('qty', 1))
+            item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m['harga', 0])
+            item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m['qty', 1])
             if cm4.button("❌", key=f"del_m_{j}"): st.session_state.input_manuals.pop(j); st.rerun()
         st.write("---")
         dp_value = st.number_input("11. DP", min_value=0, value=int(edit_data.get('dp', 0)))
@@ -278,6 +275,8 @@ elif menu == "KEUANGAN":
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
     sel_year = c2.selectbox("Pilih Tahun", ["2025","2026","2027"], index=1)
+    
+    # HITUNG OMSET (Otomatis dari Lunas + DP Pending)
     omset = 0
     for j in st.session_state.db['bookings']:
         tgl_p = j.get('tgl','').split('/')
@@ -288,6 +287,20 @@ elif menu == "KEUANGAN":
                 omset += (p_sum + m_sum)
             else:
                 omset += float(j.get('dp', 0))
+    
+    # PEMASUKAN LAIN (Input Manual)
+    st.write("---")
+    st.subheader("➕ Penghasilan Tambahan")
+    with st.form("pemasukan_form"):
+        ket_in = st.text_input("Keterangan Penghasilan (Misal: Jual Tiara)")
+        nom_in = st.number_input("Nominal (Rp)", min_value=0)
+        if st.form_submit_button("Simpan Penghasilan"):
+            st.session_state.db['pemasukan_lain'].append({"tgl": date.today().strftime("%d/%m/%Y"), "ket": ket_in, "nom": nom_in})
+            save_data(); st.rerun()
+    
+    total_pemasukan_lain = sum([float(p.get('nom', 0)) for p in st.session_state.db.get('pemasukan_lain', []) if len(p.get('tgl','').split('/')) == 3 and p.get('tgl','').split('/')[1] == sel_month and p.get('tgl','').split('/')[2] == sel_year])
+    
+    # PENGELUARAN (Input Manual)
     st.write("---")
     st.subheader("💸 Pengeluaran Manual")
     with st.form("pengeluaran_form"):
@@ -296,13 +309,12 @@ elif menu == "KEUANGAN":
         if st.form_submit_button("Simpan Pengeluaran"):
             st.session_state.db['pengeluaran'].append({"tgl": date.today().strftime("%d/%m/%Y"), "ket": ket_out, "nom": nom_out})
             save_data(); st.rerun()
+    
     total_out = sum([float(p.get('nom', 0)) for p in st.session_state.db.get('pengeluaran', []) if len(p.get('tgl','').split('/')) == 3 and p.get('tgl','').split('/')[1] == sel_month and p.get('tgl','').split('/')[2] == sel_year])
+    
+    final_omset = omset + total_pemasukan_lain
     st.divider()
     col1, col2, col3 = st.columns(3)
-    col1.metric("OMSET (Bruto)", f"Rp {omset:,}")
+    col1.metric("OMSET (Bruto)", f"Rp {final_omset:,}")
     col2.metric("PENGELUARAN", f"Rp {total_out:,}")
-    col3.metric("NETT (Bersih)", f"Rp {omset - total_out:,}")
-    filtered_out = [p for p in st.session_state.db.get('pengeluaran', []) if len(p.get('tgl','').split('/')) == 3 and p.get('tgl','').split('/')[1] == sel_month and p.get('tgl','').split('/')[2] == sel_year]
-    if filtered_out:
-        st.write("**Detail Pengeluaran:**")
-        st.table(pd.DataFrame(filtered_out))
+    col3.metric("NETT (Bersih)", f"Rp {final_omset - total_out:,}")
