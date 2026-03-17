@@ -148,7 +148,22 @@ if menu == "BERANDA":
                 
                     html_final = f"""
                     <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
-                        <div style="position:absolute;top:20px;right:20px;border:3px solid {warna_tema};color:{warna_tema};padding:5px;transform:rotate(-15deg);">{stempel_text}</div>
+                       <div style="
+                        position:absolute;
+                        top:50%;
+                        left:50%;
+                        transform:translate(-50%, -50%) rotate(-15deg);
+                        font-size:70px;
+                        font-weight:bold;
+                        color:{warna_tema};
+                        border:5px solid {warna_tema};
+                        padding:20px 40px;
+                        opacity:0.15;
+                        border-radius:10px;
+                        pointer-events:none;
+                    ">
+                        {stempel_text}
+                    </div>
                         <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
                 
                         <div style="display:flex; align-items:center; gap:10px;">
