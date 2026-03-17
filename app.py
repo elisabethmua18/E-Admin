@@ -20,6 +20,11 @@ st.markdown("""
         background-color: white; padding: 15px; border-radius: 10px; 
         margin-bottom: 10px; border-left: 8px solid #F19CBB; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
+    .delete-btn > button {
+        background-color: #ff4b4b !important;
+        padding: 0px !important;
+        height: 25px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -66,57 +71,131 @@ if not st.session_state.auth:
 menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
 
 # --- SESSION STATE UNTUK DINAMIS INPUT ---
-if 'n_paket' not in st.session_state: st.session_state.n_paket = 1
-if 'n_manual' not in st.session_state: st.session_state.n_manual = 0
+if 'input_pakets' not in st.session_state: st.session_state.input_pakets = []
+if 'input_manuals' not in st.session_state: st.session_state.input_manuals = []
 
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     st.write("Daftar jadwal akan muncul di sini setelah diinput.")
 
-# --- 2. INPUT JADWAL (REVISI LENGKAP) ---
+# --- 2. INPUT JADWAL (REVISI SESUAI PERMINTAAN) ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
     
-    with st.form("form_jadwal"):
+    with st.container():
         nama_klien = st.text_input("1. Nama Klien")
-        tgl_makeup = st.date_input("2. Tanggal Makeup", datetime.now()) # Popup Kalender
+        tgl_makeup = st.date_input("2. Tanggal Makeup (DD/MM/YYYY)", datetime.now())
         wa_klien = st.text_input("3. Nomor WhatsApp")
         alamat_makeup = st.text_area("4. Alamat Makeup")
         
-        # Pilihan Timeline Jam (00.00, 00.15, dst)
         times = [time(h, m).strftime("%H:%M") for h in range(24) for m in (0, 15, 30, 45)]
         c1, c2, c3 = st.columns(3)
-        jam_mulai = c1.selectbox("5. Jam Mulai", times, index=32) # Default 08:00
-        jam_selesai = c2.selectbox("6. Jam Selesai", times, index=40) # Default 10:00
-        jam_otw = c3.selectbox("7. Jam OTW", times, index=28) # Default 07:00
+        jam_m = c1.selectbox("5. Jam Mulai", times, index=32)
+        jam_s = c2.selectbox("6. Jam Selesai", times, index=40)
+        jam_o = c3.selectbox("7. Jam OTW", times, index=28)
         
-        durasi_otw = st.number_input("8. Durasi OTW (Menit) - Ketik Manual", min_value=0, value=30)
+        durasi_otw = st.number_input("8. Durasi OTW (Menit)", min_value=0, value=30)
         
         st.write("---")
-        st.write("**9. Pilihan Paket**")
-        paket_terpilih = []
-        master_list = list(st.session_state.db['master_layanan'].keys()) if st.session_state.db['master_layanan'] else ["Belum ada paket"]
+        # --- BAGIAN PAKET ---
+        st.write("**9. Pilih Paket**")
+        master_layanan_list = list(st.session_state.db['master_layanan'].keys())
         
-        # Input Paket Dinamis
-        for i in range(st.session_state.n_paket):
-            cp1, cp2 = st.columns([3, 1])
-            p_nama = cp1.selectbox(f"Pilih Paket {i+1}", master_list, key=f"p_nama_{i}")
-            p_qty = cp2.number_input(f"Qty {i+1}", min_value=1, key=f"p_qty_{i}")
-            if p_nama != "Belum ada paket":
-                paket_terpilih.append({"nama": p_nama, "qty": p_qty, "price": st.session_state.db['master_layanan'].get(p_nama, 0)})
+        col_sel, col_add = st.columns([3, 1])
+        selected_p = col_sel.selectbox("Cari Paket Master", ["-- Pilih Paket --"] + master_layanan_list)
+        if col_add.button("PILIH PAKET"):
+            if selected_p != "-- Pilih Paket --":
+                st.session_state.input_pakets.append({"nama": selected_p, "qty": 1, "price": st.session_state.db['master_layanan'][selected_p]})
         
-        if st.form_submit_button("➕ Tambah Baris Paket"):
-            st.session_state.n_paket += 1
-            st.rerun()
+        # List Paket yang sudah dipilih (Urutan menurun)
+        for i, item in enumerate(st.session_state.input_pakets):
+            cp1, cp2, cp3 = st.columns([3, 1, 0.5])
+            cp1.markdown(f"**{item['nama']}**")
+            item['qty'] = cp2.number_input("Qty", min_value=1, key=f"qty_p_{i}", value=item['qty'])
+            if cp3.button("❌", key=f"del_p_{i}"):
+                st.session_state.input_pakets.pop(i)
+                st.rerun()
 
         st.write("---")
+        # --- BAGIAN LAYANAN MANUAL ---
         st.write("**10. Layanan Tambahan Manual**")
-        manual_terpilih = []
-        for j in range(st.session_state.n_manual):
-            cm1, cm2, cm3 = st.columns([2, 1, 1])
-            m_ket = cm1.text_input(f"Keterangan {j+1}", key=f"m_ket_{j}")
-            m_hrg = cm2.number_input(f"Harga {j+1}", min_value=0, key=f"m_hrg_{j}")
-            m_qty = cm3.number_input(f"Qty {j+1}", min_value=1, key=f"m_qty_{j}")
-            if m_ket:
-                manual_terpilih.append
+        if st.button("TAMBAH LAYANAN MANUAL"):
+            st.session_state.input_manuals.append({"nama": "", "harga": 0, "qty": 1})
+        
+        for j, item_m in enumerate(st.session_state.input_manuals):
+            cm1, cm2, cm3, cm4 = st.columns([2, 1, 1, 0.5])
+            item_m['nama'] = cm1.text_input("Keterangan", key=f"m_nama_{j}", value=item_m['nama'])
+            item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m['harga'])
+            item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m['qty'])
+            if cm4.button("❌", key=f"del_m_{j}"):
+                st.session_state.input_manuals.pop(j)
+                st.rerun()
+
+        st.write("---")
+        # --- BAGIAN TIM ---
+        st.write("**11. Hire Tim**")
+        hire_tim = st.checkbox("Gunakan Tim Tambahan?")
+        if hire_tim:
+            ct1, ct2 = st.columns(2)
+            tim_type = ct1.selectbox("Jenis Tim", ["Hairdo", "Hijabdo"])
+            tim_nama = ct2.text_input("Nama Anggota Tim")
+        else:
+            tim_type = "-"
+            tim_nama = "-"
+            
+        dp_value = st.number_input("DP (Down Payment)", min_value=0)
+
+        # --- TOMBOL SIMPAN ---
+        st.write("---")
+        if st.button("💾 SIMPAN JADWAL KE DATABASE"):
+            if not nama_klien:
+                st.error("Nama Klien wajib diisi!")
+            elif not st.session_state.input_pakets and not st.session_state.input_manuals:
+                st.error("Pilih minimal satu paket atau layanan tambahan!")
+            else:
+                new_booking = {
+                    "inv_no": f"INV{st.session_state.db['faktur_settings'].get('next_inv', 1):04d}",
+                    "nama": nama_klien,
+                    "tgl": tgl_makeup.strftime("%d/%m/%Y"),
+                    "wa": wa_klien,
+                    "alamat_mu": alamat_makeup,
+                    "jam_ready": f"{jam_m}-{jam_s}",
+                    "jam_otw": jam_o,
+                    "durasi_otw": durasi_otw,
+                    "paket_list": st.session_state.input_pakets,
+                    "manual_list": st.session_state.input_manuals,
+                    "hire_tim": hire_tim,
+                    "tim_type": tim_type,
+                    "tim_nama": tim_nama,
+                    "dp": dp_value,
+                    "status": "PENDING"
+                }
+                st.session_state.db['bookings'].append(new_booking)
+                st.session_state.db['faktur_settings']['next_inv'] += 1
+                save_data()
+                st.success(f"Jadwal {nama_klien} berhasil disimpan!")
+                # Reset Form
+                st.session_state.input_pakets = []
+                st.session_state.input_manuals = []
+                st.rerun()
+
+# --- MENU LAINNYA ---
+elif menu == "LAYANAN":
+    st.header("💄 Master Layanan Utama")
+    with st.form("master"):
+        nl = st.text_input("Nama Paket Baru")
+        hl = st.number_input("Harga Master", min_value=0)
+        if st.form_submit_button("Tambah ke Master"):
+            st.session_state.db['master_layanan'][nl] = hl
+            save_data(); st.success("Paket tersimpan!"); st.rerun()
+    st.write("Daftar Paket:")
+    st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
+
+elif menu == "PROFIL & SETTING":
+    st.header("👤 Profil & Setting")
+    st.info("Silakan kembangkan bagian ini untuk setting Bank dan TnC.")
+
+elif menu == "KEUANGAN":
+    st.header("💰 Laporan Keuangan")
+    st.write("Fitur laporan otomatis dari data booking.")
