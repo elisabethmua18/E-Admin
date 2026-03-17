@@ -123,11 +123,59 @@ if menu == "BERANDA":
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        # ... (kode perhitungan total_p, total_m, total_semua tetap biarkan) ...
-        # Pastikan variabel total_semua dan sisa_teks sudah terhitung di atas baris ini
+       # 1. HITUNG TOTAL (Layanan Paket & Manual)
+        total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
+        total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
+        total_semua = total_p + total_m
+        dp_val = float(f.get('dp', 0))
+        sisa_bayar = total_semua - dp_val
+        
+        # 2. RAKIT LOGO & STEMPEL
+        logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:75px; position: absolute; left: 10px; top: 10px;">' if p.get('logo_base64') else ""
+        stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
+        sisa_teks = f"<span style='color:green;'>LUNAS HARI H (Rp {sisa_bayar:,.0f})</span>" if f.get('status') == "SELESAI (LUNAS)" else f"Rp {sisa_bayar:,.0f}"
 
+        # 3. BUAT ISI NOTA (nota_html)
+        nota_html = f"""
+        <div class="faktur-box">
+            {stempel}
+            <div style="position: relative; height: 100px; width: 100%;">
+                {logo_html}
+                <center>
+                    <h2 style="margin:0; color:#F19CBB;">{p['nama']}</h2>
+                    <p style="margin:0; font-size:12px;">{p['alamat']}<br>WA: {p['hp']} | IG: {p['ig']}</p>
+                </center>
+            </div>
+            <hr style="border: 1px solid #eee;">
+            <p><b>INVOICE #{f['inv_no']}</b></p>
+            <table style="width:100%; font-size: 14px;">
+                <tr><td style="width:35%;">Nama Klien</td><td>: {f['nama']}</td></tr>
+                <tr><td>Tanggal</td><td>: {f['tgl']}</td></tr>
+                <tr><td>Lokasi</td><td>: {f['alamat_mu']}</td></tr>
+                <tr><td>Jam Kerja</td><td>: {f['jam_ready']}</td></tr>
+            </table>
+            <br>
+            <p style="border-bottom: 1px solid #eee;"><b>RINCIAN LAYANAN:</b></p>
+        """
+        for item in f.get('paket_list', []):
+            nota_html += f"<div style='display:flex; justify-content:space-between; font-size:13px;'><span>• {item['nama']} (x{item['qty']})</span><span>Rp {float(item['price'])*int(item['qty']):,.0f}</span></div>"
+        
+        nota_html += f"""
+            <hr style="border: 1px dashed #eee; margin: 15px 0;">
+            <table style="width:100%; font-weight: bold; font-size: 15px;">
+                <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,.0f}</td></tr>
+                <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {dp_val:,.0f}</td></tr>
+                <tr><td>SISA PELUNASAN</td><td style="text-align:right;">{sisa_teks}</td></tr>
+            </table>
+            <br>
+            <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px;">
+                <b>REKENING PEMBAYARAN:</b><br>{p['bank']} {p['no_rek']} a/n {p['an']}
+            </div>
+        </div>
+        """
+
+        # 4. TAMPILKAN KE LAYAR (Line 131 yang baru)
         st.divider()
-        # PERBAIKAN UTAMA: Gunakan st.markdown dengan unsafe_allow_html agar nota rapi
         st.markdown(nota_html, unsafe_allow_html=True)
         
         # Tombol download di bawah nota
