@@ -63,7 +63,7 @@ def create_pdf(booking):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, st.session_state.db['profile'].get('nama', 'Elisabeth MUA'), ln=True, align='C')
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 5, st.session_state.db['profile'].get('alamat', ''), ln=True, align='C')
+    pdf.cell(0, 5, f"{st.session_state.db['profile'].get('alamat', '')}", ln=True, align='C')
     pdf.cell(0, 5, f"WA: {st.session_state.db['profile'].get('hp', '')} | IG: {st.session_state.db['profile'].get('ig', '')}", ln=True, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", "B", 12)
@@ -103,7 +103,7 @@ def create_pdf(booking):
     pdf.cell(0, 10, st.session_state.db['faktur_settings'].get('salam', ''), ln=True, align='C')
     pdf.ln(5)
     pdf.cell(0, 8, st.session_state.db['faktur_settings'].get('signature', ''), ln=True, align='R')
-    return pdf.output(dest='S')
+    return pdf.output(dest='S').encode('latin-1')
 
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
@@ -123,7 +123,7 @@ menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL &
 if 'input_pakets' not in st.session_state: st.session_state.input_pakets = []
 if 'input_manuals' not in st.session_state: st.session_state.input_manuals = []
 
-# --- 1. BERANDA (REVISI URUTAN JAM & POSISI MOBIL) ---
+# --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     selected_date = st.date_input("Pilih Tanggal", value=date.today(), key="calendar_input")
@@ -134,7 +134,7 @@ if menu == "BERANDA":
     # FILTER SEMUA JOB DI TANGGAL TERSEBUT
     list_job = [b for b in st.session_state.db['bookings'] if b['tgl'] == selected_str]
     
-    # URUTKAN BERDASARKAN JAM MULAI (Paling Pagi)
+    # URUTKAN BERDASARKAN JAM MULAI
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
     
     if not list_job:
@@ -142,7 +142,6 @@ if menu == "BERANDA":
     else:
         for i, b in enumerate(list_job):
             with st.container():
-                # Tampilan Schedule
                 st.markdown(f"""
                 <div class="job-card">
                     <h3 style="margin:0; color:#F19CBB;">{b['nama']} - {b['inv_no']}</h3>
@@ -152,10 +151,8 @@ if menu == "BERANDA":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # POSISI INFO OTW (DI BAWAH SCHEDULE)
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} (Durasi: {b.get("durasi_otw","-")} menit)</p>', unsafe_allow_html=True)
                 
-                # TOMBOL-TOMBOL
                 c1, c2, c3 = st.columns(3)
                 if c1.button("EDIT", key=f"ed_{i}"): st.warning("Fitur edit sinkron...")
                 if c2.button("✅ SELESAI (LUNAS)", key=f"dn_{i}"):
@@ -254,7 +251,7 @@ elif menu == "PROFIL & SETTING":
         st.subheader("⚙️ Aturan Faktur")
         st.session_state.db['faktur_settings']['tnc'] = st.text_area("Terms & Conditions (TnC)", st.session_state.db['faktur_settings'].get('tnc', ''), height=200)
         st.session_state.db['faktur_settings']['salam'] = st.text_area("Salam Penutup", st.session_state.db['faktur_settings'].get('salam', ''), height=100)
-        st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature (Tanda Tangan)", st.session_state.db['faktur_settings'].get('signature', ''))
+        st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature (Nama Tanda Tangan)", st.session_state.db['faktur_settings'].get('signature', ''))
         if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Berhasil Disimpan!")
 
 elif menu == "KEUANGAN":
