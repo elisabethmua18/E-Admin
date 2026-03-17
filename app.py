@@ -119,94 +119,94 @@ if menu == "BERANDA":
                     st.session_state.current_faktur = b
 
 
-if 'current_faktur' in st.session_state:
-    f = st.session_state.current_faktur
-    p = st.session_state.db['profile']
-    s = st.session_state.db['faktur_settings']
-    
-    total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
-    total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
-    total_semua = total_p + total_m
-    dp_val = float(f.get('dp', 0))
-    sisa_val = max(total_semua - dp_val, 0)
-    
-    is_lunas = f.get('status') == "SELESAI (LUNAS)"
-    warna_tema = "#4caf50" if is_lunas else "#F19CBB"
-    stempel_text = "LUNAS" if is_lunas else "BOOKED"
-
-    logo_html = ""
-    if 'logo_img' in st.session_state:
-        logo_html = f'<img src="data:image/png;base64,{st.session_state.logo_img}" style="width:70px;">'
-
-    isi_layanan = ""
-    for item in f.get('paket_list', []):
-        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item.get('nama')}</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
-    for item_m in f.get('manual_list', []):
-        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
-
-    tnc_html = s.get('tnc','').replace('\n','<br>')
-
-    html_final = f"""
-    <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
-        <div style="position:absolute;top:20px;right:20px;border:3px solid {warna_tema};color:{warna_tema};padding:5px;transform:rotate(-15deg);">{stempel_text}</div>
-        <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
-
-        <center>
-            <h2 style="color:#F19CBB;margin:0;">{p.get('nama')}</h2>
-            <p style="font-size:12px;color:#777;margin:0;">{p.get('alamat')}<br>WA: {p.get('hp')}</p>
-        </center>
-
-        <hr>
-
-        <b>Invoice:</b> {f.get('inv_no')}<br>
-        <b>Tanggal:</b> {f.get('tgl')}<br>
-        <b>Klien:</b> {f.get('nama')}<br>
-        <b>WA:</b> {f.get('wa')}<br>
-        <b>Lokasi:</b> {f.get('alamat_mu')}<br>
-        <b>Jam:</b> {f.get('jam_ready')}<br>
-
-        <hr>
-
-        <b>RINCIAN</b>
-        {isi_layanan}
-
-        <hr>
-
-        <b>Total:</b> Rp {total_semua:,.0f}<br>
-        <b>DP:</b> Rp {dp_val:,.0f}<br>
-        <b>Sisa:</b> {"LUNAS" if is_lunas else f"Rp {sisa_val:,.0f}"}
-
-        <hr>
-
-        <b>Transfer:</b><br>
-        {p.get('bank')} {p.get('no_rek')}<br>
-        a/n {p.get('an')}
-
-        <br><br>
-
-        <b>Syarat & Ketentuan</b><br>
-        {tnc_html}
-
-        <br><br>
-
-        <center><i>{s.get('salam')}</i></center>
-
-        <div style="text-align:right;margin-top:40px;">
-        {s.get('signature')}
-        </div>
-    </div>
-    """
-
-    st.divider()
-    components.html(html_final, height=900, scrolling=True)
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
-    with col_b:
-        if st.button("❌ TUTUP"):
-            del st.session_state.current_faktur
-            st.rerun()
+                                if 'current_faktur' in st.session_state:
+                                   if 'current_faktur' in st.session_state:
+                                    f = st.session_state.current_faktur
+                                    p = st.session_state.db['profile']
+                    
+                    total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
+                    total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
+                    total_semua = total_p + total_m
+                    dp_val = float(f.get('dp', 0))
+                    sisa_val = max(total_semua - dp_val, 0)
+                    
+                    is_lunas = f.get('status') == "SELESAI (LUNAS)"
+                    warna_tema = "#4caf50" if is_lunas else "#F19CBB"
+                    stempel_text = "LUNAS" if is_lunas else "BOOKED"
+                
+                    logo_html = ""
+                    if 'logo_img' in st.session_state:
+                        logo_html = f'<img src="data:image/png;base64,{st.session_state.logo_img}" style="width:70px;">'
+                
+                    isi_layanan = ""
+                    for item in f.get('paket_list', []):
+                        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item.get('nama')}</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
+                    for item_m in f.get('manual_list', []):
+                        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
+                
+                    tnc_html = s.get('tnc','').replace('\n','<br>')
+                
+                    html_final = f"""
+                    <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
+                        <div style="position:absolute;top:20px;right:20px;border:3px solid {warna_tema};color:{warna_tema};padding:5px;transform:rotate(-15deg);">{stempel_text}</div>
+                        <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
+                
+                        <center>
+                            <h2 style="color:#F19CBB;margin:0;">{p.get('nama')}</h2>
+                            <p style="font-size:12px;color:#777;margin:0;">{p.get('alamat')}<br>WA: {p.get('hp')}</p>
+                        </center>
+                
+                        <hr>
+                
+                        <b>Invoice:</b> {f.get('inv_no')}<br>
+                        <b>Tanggal:</b> {f.get('tgl')}<br>
+                        <b>Klien:</b> {f.get('nama')}<br>
+                        <b>WA:</b> {f.get('wa')}<br>
+                        <b>Lokasi:</b> {f.get('alamat_mu')}<br>
+                        <b>Jam:</b> {f.get('jam_ready')}<br>
+                
+                        <hr>
+                
+                        <b>RINCIAN</b>
+                        {isi_layanan}
+                
+                        <hr>
+                
+                        <b>Total:</b> Rp {total_semua:,.0f}<br>
+                        <b>DP:</b> Rp {dp_val:,.0f}<br>
+                        <b>Sisa:</b> {"LUNAS" if is_lunas else f"Rp {sisa_val:,.0f}"}
+                
+                        <hr>
+                
+                        <b>Transfer:</b><br>
+                        {p.get('bank')} {p.get('no_rek')}<br>
+                        a/n {p.get('an')}
+                
+                        <br><br>
+                
+                        <b>Syarat & Ketentuan</b><br>
+                        {tnc_html}
+                
+                        <br><br>
+                
+                        <center><i>{s.get('salam')}</i></center>
+                
+                        <div style="text-align:right;margin-top:40px;">
+                        {s.get('signature')}
+                        </div>
+                    </div>
+                    """
+                
+                    st.divider()
+                    components.html(html_final, height=900, scrolling=True)
+                
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
+                    with col_b:
+                        if st.button("❌ TUTUP"):
+                            del st.session_state.current_faktur
+                            st.rerun()
             
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
