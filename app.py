@@ -20,8 +20,8 @@ st.markdown("""
         margin-bottom: 5px; border-left: 10px solid #F19CBB; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
     }
     .faktur-box {
-        background-color: white; padding: 30px; border: 3px solid #F19CBB; border-radius: 10px;
-        color: black; line-height: 1.4; font-family: 'Arial', sans-serif;
+        background-color: white; padding: 30px; border: 1px solid #eee; border-radius: 10px;
+        color: black; line-height: 1.5; font-family: 'Arial', sans-serif; position: relative;
     }
     .otw-info {
         color: #777; font-style: italic; font-size: 0.9em; margin: 5px 0 20px 10px;
@@ -105,47 +105,43 @@ if menu == "BERANDA":
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
-    # --- TAMPILAN FAKTUR LENGKAP (PREVIEW UNTUK SCREENSHOT) ---
+    # --- REVISI FAKTUR FINAL ---
     if 'current_faktur' in st.session_state:
         f = st.session_state.current_faktur
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        # Logika Perhitungan Harga
         total_p = sum([item['price'] * item['qty'] for item in f.get('paket_list', [])])
         total_m = sum([item['harga'] * item['qty'] for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
-        dp_diterima = f.get('dp', 0)
-        kurang_bayar = total_semua - dp_diterima
+        kurang_bayar = total_semua - f.get('dp', 0)
+        
+        # S&K Menurun (Replace newline dengan <br>)
+        tnc_formatted = s['tnc'].replace('\n', '<br>')
         
         st.divider()
-        st.subheader("📸 Screenshot Nota di Bawah Ini:")
-        
         nota_html = f"""
         <div class="faktur-box">
+            <div style="position: absolute; top: 20px; left: 20px; width: 60px; height: 60px; border: 1px dashed #F19CBB; text-align: center; font-size: 10px; color: #F19CBB;">LOGO</div>
             <center>
-                <h2 style="margin:0; color:#F19CBB;">{p['nama']}</h2>
-                <p style="margin:0;">{p['alamat']}</p>
-                <p style="margin:0;">WA: {p['hp']} | IG: {p['ig']}</p>
+                <h2 style="margin:0; color:#F19CBB; padding-left: 50px;">{p['nama']}</h2>
+                <p style="margin:0; padding-left: 50px;">{p['alamat']}<br>WA: {p['hp']} | IG: {p['ig']}</p>
             </center>
-            <hr style="border: 1px solid #eee;">
+            <hr style="border: 1px solid #eee; margin-top: 20px;">
             <p><b>INVOICE #{f['inv_no']}</b></p>
-            <table style="width:100%; font-size: 14px; border-collapse: collapse;">
+            <table style="width:100%; font-size: 14px;">
                 <tr><td style="width:35%;">Nama Klien</td><td>: {f['nama']}</td></tr>
                 <tr><td>No. WhatsApp</td><td>: {f.get('wa','-')}</td></tr>
                 <tr><td>Tanggal Acara</td><td>: {f['tgl']}</td></tr>
                 <tr><td>Lokasi Makeup</td><td>: {f['alamat_mu']}</td></tr>
                 <tr><td>Jam Kerja</td><td>: {f['jam_ready']}</td></tr>
-                <tr><td>Jam OTW</td><td>: {f['jam_otw']} ({f['durasi_otw']} menit)</td></tr>
             </table>
             <br>
             <p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
             <div style="font-size: 13px;">
         """
-        # List Paket
         for item in f.get('paket_list', []):
             nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item['nama']} (x{item['qty']})</span><span>Rp {item['price']*item['qty']:,}</span></div>"
-        # List Manual
         for item_m in f.get('manual_list', []):
             nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m['nama']} (x{item_m['qty']})</span><span>Rp {item_m['harga']*item_m['qty']:,}</span></div>"
         
@@ -154,27 +150,29 @@ if menu == "BERANDA":
             <hr style="border: 1px dashed #eee; margin: 15px 0;">
             <table style="width:100%; font-weight: bold; font-size: 15px;">
                 <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,}</td></tr>
-                <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {dp_diterima:,}</td></tr>
+                <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {f.get('dp',0):,}</td></tr>
                 <tr style="color: #d9534f;"><td>SISA PELUNASAN</td><td style="text-align:right;">Rp {kurang_bayar:,}</td></tr>
             </table>
             <br>
             <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 13px;">
-                <b>REKENING PEMBAYARAN:</b><br>
-                {p['bank']} {p['no_rek']}<br>
-                a/n {p['an']}
+                <b>REKENING PEMBAYARAN:</b><br>{p['bank']} {p['no_rek']}<br>a/n {p['an']}
             </div>
             <br>
-            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{s['tnc']}</p>
+            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{tnc_formatted}</p>
             <center><p style="margin-top:20px; font-weight: bold;">{s['salam']}</p></center>
-            <div style="text-align:right; margin-top:10px;">
-                <p>Ttd,<br><br><br><b>{s['signature']}</b></p>
-            </div>
+            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><br><b>{s['signature']}</b></p></div>
         </div>
         """
         st.markdown(nota_html, unsafe_allow_html=True)
-        if st.button("Tutup Preview Faktur"):
-            del st.session_state.current_faktur
-            st.rerun()
+        
+        # DOWNLOAD SEBAGAI HTML (Image-friendly)
+        st.download_button(
+            label=f"💾 DOWNLOAD IMAGE-NOTA ({f['nama']})",
+            data=f"<html><body style='display:flex; justify-content:center; padding:20px;'>{nota_html}</body></html>",
+            file_name=f"Invoice_{f['nama']}.html",
+            mime="text/html"
+        )
+        if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
 
 # --- 2. INPUT JADWAL (TIDAK BERUBAH) ---
 elif menu == "INPUT JADWAL":
