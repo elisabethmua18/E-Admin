@@ -4,6 +4,9 @@ import json
 import os
 import pandas as pd
 import base64
+def save_db(db):
+    with open("db.json", "w") as f:
+        json.dump(db, f, indent=2)
 from datetime import datetime, time, date
 
 # --- CONFIG HALAMAN ---
