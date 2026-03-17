@@ -117,7 +117,7 @@ if menu == "BERANDA":
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
-    # --- PERBAIKAN FOKUS PADA LOGIKA FAKTUR ---
+    # --- PERBAIKAN TOTAL PADA FAKTUR AGAR TIDAK ERROR ---
     if 'current_faktur' in st.session_state:
         f = st.session_state.current_faktur
         p = st.session_state.db['profile']
@@ -129,13 +129,20 @@ if menu == "BERANDA":
         
         stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
         
-        # Hitung Total dengan mengecek keberadaan list
-        total_p = sum([item.get('price', 0) * item.get('qty', 0) for item in f.get('paket_list', [])])
-        total_m = sum([item.get('harga', 0) * item.get('qty', 0) for item in f.get('manual_list', [])])
+        # HITUNG ULANG DISINI AGAR AKURAT
+        total_p = 0
+        if 'paket_list' in f:
+            for item in f['paket_list']:
+                total_p += (item.get('price', 0) * item.get('qty', 1))
+        
+        total_m = 0
+        if 'manual_list' in f:
+            for item_m in f['manual_list']:
+                total_m += (item_m.get('harga', 0) * item_m.get('qty', 1))
+        
         total_semua = total_p + total_m
         dp_val = f.get('dp', 0)
-        kurang_bayar = total_semua - dp_val
-        tnc_formatted = s['tnc'].replace('\n', '<br>')
+        sisa_tagihan = total_semua - dp_val
         
         st.divider()
         nota_html = f"""
@@ -161,12 +168,15 @@ if menu == "BERANDA":
             <p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
             <div style="font-size: 13px;">
         """
-        # Menampilkan Paket List
-        for item in f.get('paket_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {item.get('price',0)*item.get('qty',1):,}</span></div>"
-        # Menampilkan Manual List
-        for item_m in f.get('manual_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {item_m.get('harga',0)*item_m.get('qty',1):,}</span></div>"
+        # LIST RINCIAN PAKET
+        if 'paket_list' in f:
+            for item in f['paket_list']:
+                nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {item.get('price',0)*item.get('qty',1):,}</span></div>"
+        
+        # LIST RINCIAN MANUAL
+        if 'manual_list' in f:
+            for item_m in f['manual_list']:
+                nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {item_m.get('harga',0)*item_m.get('qty',1):,}</span></div>"
         
         nota_html += f"""
             </div>
@@ -174,23 +184,23 @@ if menu == "BERANDA":
             <table style="width:100%; font-weight: bold; font-size: 15px;">
                 <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,}</td></tr>
                 <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {dp_val:,}</td></tr>
-                <tr style="color: #d9534f;"><td>SISA PELUNASAN</td><td style="text-align:right;">Rp {kurang_bayar if f.get('status') != 'SELESAI (LUNAS)' else 0:,}</td></tr>
+                <tr style="color: #d9534f;"><td>SISA PELUNASAN</td><td style="text-align:right;">Rp {max(0, sisa_tagihan) if f.get('status') != 'SELESAI (LUNAS)' else 0:,}</td></tr>
             </table>
             <br>
             <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px;">
                 <b>REKENING PEMBAYARAN:</b><br>{p['bank']} {p['no_rek']}<br>a/n {p['an']}
             </div>
             <br>
-            <p style="font-size:11px; color: #555;"><b>S&K:</b><br>{tnc_formatted}</p>
+            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{s['tnc'].replace('\\n','<br>').replace('\n','<br>')}</p>
             <center><p style="margin-top:20px; font-weight: bold;">{s['salam']}</p></center>
-            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s['signature']}</b></p></div>
+            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><br><b>{s['signature']}</b></p></div>
         </div>
         """
         st.markdown(nota_html, unsafe_allow_html=True)
         st.download_button(label="💾 DOWNLOAD NOTA", data=f"<html><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
         if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
 
-# --- 2. INPUT JADWAL (SAMA) ---
+# --- 2. INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
     with st.container():
@@ -232,6 +242,7 @@ elif menu == "INPUT JADWAL":
         st.write("---")
         dp_value = st.number_input("11. DP (Down Payment)", min_value=0)
         st.write("---")
+        st.write("**Hire Tim**")
         hire_tim = st.checkbox("Gunakan Tim Tambahan?")
         if hire_tim:
             ct1, ct2 = st.columns(2)
@@ -247,7 +258,7 @@ elif menu == "INPUT JADWAL":
                 st.session_state.db['faktur_settings']['next_inv'] += 1
                 save_data(); st.success(f"Jadwal {nama_klien} Berhasil!"); st.session_state.input_pakets = []; st.session_state.input_manuals = []; st.rerun()
 
-# --- 3. LAYANAN (SAMA) ---
+# --- 3. LAYANAN ---
 elif menu == "LAYANAN":
     st.header("💄 Master Layanan Utama")
     with st.form("master"):
@@ -257,7 +268,7 @@ elif menu == "LAYANAN":
             st.session_state.db['master_layanan'][nl] = hl; save_data(); st.rerun()
     st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
 
-# --- 4. PROFIL & SETTING (SAMA) ---
+# --- 4. PROFIL & SETTING ---
 elif menu == "PROFIL & SETTING":
     st.header("👤 Profil & Setting Faktur")
     t_prof, t_set = st.tabs(["PROFIL", "SETTING"])
@@ -281,14 +292,14 @@ elif menu == "PROFIL & SETTING":
         st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature (Nama Tanda Tangan)", st.session_state.db['faktur_settings'].get('signature', ''))
         if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Berhasil Disimpan!")
 
-# --- 5. KEUANGAN (SAMA) ---
+# --- 5. KEUANGAN ---
 elif menu == "KEUANGAN":
     st.header("💰 Laporan Keuangan")
     lunas_jobs = [b for b in st.session_state.db['bookings'] if b.get('status') == "SELESAI (LUNAS)"]
     total_pendapatan = 0
     for j in lunas_jobs:
-        price_p = sum([p['price'] * p['qty'] for p in j.get('paket_list', [])])
-        price_m = sum([m['harga'] * m['qty'] for m in j.get('manual_list', [])])
+        price_p = sum([p.get('price', 0) * p.get('qty', 1) for p in j.get('paket_list', [])])
+        price_m = sum([m.get('harga', 0) * m.get('qty', 1) for m in j.get('manual_list', [])])
         total_j = price_p + price_m
         st.write(f"✅ {j['tgl']} - {j['nama']} : **Rp {total_j:,}**")
         total_pendapatan += total_j
