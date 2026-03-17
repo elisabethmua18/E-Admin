@@ -123,65 +123,66 @@ if menu == "BERANDA":
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        # 1. HITUNG DATA
+        # 1. PERHITUNGAN MATEMATIKA
+        # Menggunakan rumus: $total\_semua = total\_p + total\_m$
         total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
         total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
         dp_val = float(f.get('dp', 0))
-        sisa_val = total_semua - dp_val
+        sisa_bayar = total_semua - dp_val
         
-        logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px;">' if p.get('logo_base64') else ""
-        stempel_html = '<div style="position:absolute; top:20px; right:20px; border:3px solid #e91e63; color:#e91e63; padding:5px 10px; font-weight:bold; transform:rotate(-15deg); border-radius:5px; opacity:0.8; font-size:20px; z-index:99;">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
-        sisa_teks = '<span style="color:#4caf50; font-weight:bold;">LUNAS</span>' if f.get('status') == "SELESAI (LUNAS)" else f'Rp {sisa_val:,.0f}'
-
-        # 2. RAKIT DESAIN (Fokus pada kerapian di Layar Kecil)
-        # Gunakan r''' agar Python tidak bingung dengan karakter backslash
-        isi_rincian = ""
+        # 2. LOGIKA STATUS
+        is_lunas = f.get('status') == "SELESAI (LUNAS)"
+        warna_tema = "#4caf50" if is_lunas else "#F19CBB"
+        stempel = f'<div style="position:absolute; top:20px; right:15px; border:3px solid {warna_tema}; color:{warna_tema}; padding:5px; font-weight:bold; transform:rotate(-15deg); border-radius:5px; opacity:0.7;">{"LUNAS" if is_lunas else "BOOKED"}</div>'
+        
+        # 3. RAKIT HTML DALAM SATU VARIABEL BERSIH
+        isi_layanan = ""
         for item in f.get('paket_list', []):
-            isi_rincian += f"<div style='display:flex; justify-content:space-between; margin:4px 0;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
+            isi_layanan += f"<div style='display:flex; justify-content:space-between; margin:3px 0;'><span>• {item.get('nama','')}</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
         for item_m in f.get('manual_list', []):
-            isi_rincian += f"<div style='display:flex; justify-content:space-between; margin:4px 0;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
+            isi_layanan += f"<div style='display:flex; justify-content:space-between; margin:3px 0;'><span>• {item_m.get('nama','')}</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
 
-        nota_html = f"""
-        <div style="background-color:white; color:#333; padding:20px; border-radius:15px; border:1px solid #eee; font-family:sans-serif; max-width:100%; position:relative; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
-            {stempel_html}
-            <div style="text-align:center; margin-bottom:15px;">
-                {logo_html}
-                <h2 style="margin:5px 0 0; color:#F19CBB; font-size:22px;">{p.get('nama','Elisabeth MUA')}</h2>
-                <p style="margin:0; font-size:12px; color:#777;">{p.get('alamat','')}<br>WA: {p.get('hp','')} | IG: {p.get('ig','')}</p>
+        # Gabungkan semua ke dalam satu string HTML
+        html_final = f"""
+        <div style="background:white; color:#333; padding:20px; border-radius:15px; border:1px solid #eee; font-family:sans-serif; position:relative; box-shadow:0 4px 10px rgba(0,0,0,0.05); max-width:100%;">
+            {stempel}
+            <center>
+                <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
+                <p style="margin:0; font-size:11px; color:#888;">{p.get('alamat','')}<br>WA: {p.get('hp','')}</p>
+            </center>
+            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+            <table style="width:100%; font-size:12px; margin-bottom:15px;">
+                <tr><td><b>INV: {f.get('inv_no','')}</b></td><td style="text-align:right;">{f.get('tgl','')}</td></tr>
+                <tr><td>Klien: {f.get('nama','')}</td><td style="text-align:right;">{f.get('jam_ready','')}</td></tr>
+            </table>
+            <div style="font-size:12px;">
+                <p style="font-weight:bold; margin-bottom:5px; border-bottom:1px solid #f9f9f9;">RINCIAN:</p>
+                {isi_layanan}
             </div>
-            <div style="font-size:13px; border-top:1px solid #eee; border-bottom:1px solid #eee; padding:10px 0; margin-bottom:15px;">
-                <b>INVOICE #{f.get('inv_no','')}</b><br>
-                Klien: {f.get('nama','')}<br>
-                Tanggal: {f.get('tgl','')}<br>
-                Lokasi: {f.get('alamat_mu','')}
-            </div>
-            <div style="font-size:13px;">
-                <p style="font-weight:bold; border-bottom:1px solid #f9f9f9; padding-bottom:5px;">RINCIAN LAYANAN:</p>
-                {isi_rincian}
-            </div>
-            <div style="margin-top:15px; border-top:2px solid #F19CBB; padding-top:10px;">
+            <div style="margin-top:15px; padding-top:10px; border-top:2px solid #F19CBB;">
                 <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>Rp {total_semua:,.0f}</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; color:#777;"><span>DP</span><span>Rp {dp_val:,.0f}</span></div>
-                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:16px; margin-top:5px; color:#F19CBB;"><span>SISA</span><span>{sisa_teks}</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#777;"><span>DP</span><span>Rp {dp_val:,.0f}</span></div>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:{warna_tema};"><span>SISA</span><span>{'LUNAS' if is_lunas else f'Rp {sisa_bayar:,.0f}'}</span></div>
             </div>
-            <div style="margin-top:20px; background:#fff9fb; padding:10px; border-radius:8px; font-size:11px;">
-                <b>PEMBAYARAN:</b><br>{p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}
+            <div style="margin-top:15px; font-size:10px; background:#fdfdfd; padding:8px; border-radius:5px;">
+                <b>Transfer:</b> {p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}
             </div>
-            <div style="text-align:center; margin-top:20px; font-style:italic; font-size:12px;">{s.get('salam','Terima Kasih')}</div>
+            <p style="text-align:center; font-size:12px; margin-top:15px; font-style:italic;">{s.get('salam','Terima Kasih!')}</p>
         </div>
         """
 
-        # 3. OUTPUT KE LAYAR (Hanya ini yang muncul)
-        st.write("---")
-        st.markdown(nota_html, unsafe_allow_html=True)
+        # 4. TAMPILKAN KE LAYAR
+        st.divider()
+        # WAJIB gunakan unsafe_allow_html=True agar tidak tampil kode mentah
+        st.markdown(html_final, unsafe_allow_html=True)
         
-        # Tombol Download & Tutup
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button("💾 SIMPAN NOTA", data=nota_html, file_name=f"Invoice_{f.get('nama','klien')}.html", mime="text/html")
-        with col2:
-            if st.button("❌ TUTUP PREVIEW"):
+        # Tombol Aksi
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.download_button("💾 DOWNLOAD", data=html_final, file_name=f"Faktur_{f.get('nama','')}.html", mime="text/html")
+        with col_b:
+            if st.button("❌ TUTUP"):
                 del st.session_state.current_faktur
                 st.rerun()
             # --- 2. INPUT JADWAL ---
