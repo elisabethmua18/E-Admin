@@ -52,7 +52,7 @@ def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(st.session_state.db, f, indent=4)
 
-# --- FUNGSI DOWNLOAD PDF (FIXED ERROR) ---
+# --- FUNGSI DOWNLOAD PDF ---
 def create_pdf(booking):
     pdf = FPDF()
     pdf.add_page()
@@ -87,37 +87,25 @@ menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL &
 if 'input_pakets' not in st.session_state: st.session_state.input_pakets = []
 if 'input_manuals' not in st.session_state: st.session_state.input_manuals = []
 
-# --- 1. BERANDA (KALENDER & LIST SCHEDULE) ---
+# --- 1. BERANDA (REVISI SESUAI PERMINTAAN) ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     
-    # Ambil semua tanggal yang ada job
-    job_dates = []
-    for b in st.session_state.db['bookings']:
-        try:
-            job_dates.append(datetime.strptime(b['tgl'], "%d/%m/%Y").date())
-        except: continue
-    
-    # Munculkan Kalender 1 Bulan
-    st.write("### Pilih Tanggal (Biru = Ada Job)")
-    selected_date = st.date_input("Navigasi Kalender", value=date.today(), key="calendar_input")
+    # Navigasi Kalender (Tanpa tulisan Biru=Ada Job)
+    selected_date = st.date_input("Pilih Tanggal", value=date.today(), key="calendar_input")
     
     st.divider()
     
-    # Filter job di hari terpilih
+    # Filter & Sortir Jadwal
     selected_str = selected_date.strftime("%d/%m/%Y")
     todays_jobs = [b for b in st.session_state.db['bookings'] if b['tgl'] == selected_str]
-    
-    # Urutkan berdasarkan jam mulai (paling pagi)
     todays_jobs = sorted(todays_jobs, key=lambda x: x['jam_ready'].split('-')[0])
     
     if not todays_jobs:
         st.info(f"Tidak ada jadwal untuk tanggal {selected_str}")
     else:
-        st.success(f"Ditemukan {len(todays_jobs)} jadwal untuk hari ini:")
         for i, b in enumerate(todays_jobs):
             with st.container():
-                # Info OTW diletakkan di sela-sela (sebelum card)
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b["jam_otw"]} (Durasi: {b["durasi_otw"]} menit)</p>', unsafe_allow_html=True)
                 
                 st.markdown(f"""
@@ -125,139 +113,3 @@ if menu == "BERANDA":
                     <h3 style="margin:0; color:#F19CBB;">{b['nama']} - {b['inv_no']}</h3>
                     <p style="margin:5px 0;"><b>Jam Kerja:</b> {b['jam_ready']}</p>
                     <p style="margin:5px 0;"><b>Lokasi:</b> {b['alamat_mu']}</p>
-                    <p style="margin:5px 0;"><b>Tim:</b> {b['tim_type']} ({b['tim_nama']})</p>
-                    <p style="margin:5px 0;"><b>Status:</b> {b['status']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                c1, c2, c3 = st.columns(3)
-                if c1.button("EDIT", key=f"edit_{i}"):
-                    st.warning("Fitur edit sedang sinkronisasi data...")
-                
-                if c2.button("✅ SELESAI (LUNAS)", key=f"done_{i}"):
-                    b['status'] = "SELESAI (LUNAS)"
-                    save_data()
-                    st.rerun()
-                
-                # Tombol Faktur PDF (Fixed)
-                pdf_bytes = create_pdf(b)
-                c3.download_button(
-                    label="📄 FAKTUR",
-                    data=pdf_bytes,
-                    file_name=f"Faktur_{b['nama']}.pdf",
-                    mime="application/pdf",
-                    key=f"dl_{i}"
-                )
-
-# --- 2. INPUT JADWAL ---
-elif menu == "INPUT JADWAL":
-    st.header("📝 Tambah Jadwal Baru")
-    
-    with st.container():
-        nama_klien = st.text_input("1. Nama Klien")
-        tgl_makeup = st.date_input("2. Tanggal Makeup", datetime.now())
-        wa_klien = st.text_input("3. Nomor WhatsApp")
-        alamat_makeup = st.text_area("4. Alamat Makeup")
-        
-        times = [time(h, m).strftime("%H:%M") for h in range(24) for m in (0, 15, 30, 45)]
-        c1, c2, c3 = st.columns(3)
-        jam_m = c1.selectbox("5. Jam Mulai", times, index=32)
-        jam_s = c2.selectbox("6. Jam Selesai", times, index=40)
-        jam_o = c3.selectbox("7. Jam OTW", times, index=28)
-        
-        durasi_otw = st.number_input("8. Durasi OTW (Menit)", min_value=0, value=30)
-        
-        st.write("---")
-        st.write("**9. Pilih Paket**")
-        master_layanan_list = list(st.session_state.db['master_layanan'].keys())
-        col_sel, col_add = st.columns([3, 1])
-        selected_p = col_sel.selectbox("Cari Paket Master", ["-- Pilih Paket --"] + master_layanan_list)
-        if col_add.button("PILIH PAKET"):
-            if selected_p != "-- Pilih Paket --":
-                st.session_state.input_pakets.append({"nama": selected_p, "qty": 1, "price": st.session_state.db['master_layanan'][selected_p]})
-        
-        for i, item in enumerate(st.session_state.input_pakets):
-            cp1, cp2, cp3 = st.columns([3, 1, 0.5])
-            cp1.markdown(f"**{item['nama']}**")
-            item['qty'] = cp2.number_input("Qty", min_value=1, key=f"qty_p_{i}", value=item['qty'])
-            if cp3.button("❌", key=f"del_p_{i}"):
-                st.session_state.input_pakets.pop(i)
-                st.rerun()
-
-        st.write("---")
-        st.write("**10. Layanan Tambahan Manual**")
-        if st.button("TAMBAH LAYANAN MANUAL"):
-            st.session_state.input_manuals.append({"nama": "", "harga": 0, "qty": 1})
-        
-        for j, item_m in enumerate(st.session_state.input_manuals):
-            cm1, cm2, cm3, cm4 = st.columns([2, 1, 1, 0.5])
-            item_m['nama'] = cm1.text_input("Keterangan", key=f"m_nama_{j}", value=item_m['nama'])
-            item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m['harga'])
-            item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m['qty'])
-            if cm4.button("❌", key=f"del_m_{j}"):
-                st.session_state.input_manuals.pop(j)
-                st.rerun()
-
-        st.write("---")
-        dp_value = st.number_input("11. DP (Down Payment)", min_value=0)
-        
-        st.write("---")
-        st.write("**Hire Tim**")
-        hire_tim = st.checkbox("Gunakan Tim Tambahan?")
-        if hire_tim:
-            ct1, ct2 = st.columns(2)
-            tim_type = ct1.selectbox("Jenis Tim", ["Hairdo", "Hijabdo", "Hairdo + Hijabdo"])
-            tim_nama = ct2.text_input("Nama Anggota Tim")
-        else:
-            tim_type = "-"
-            tim_nama = "-"
-
-        st.write("---")
-        if st.button("💾 SIMPAN JADWAL KE DATABASE"):
-            if not nama_klien:
-                st.error("Nama Klien wajib diisi!")
-            else:
-                new_booking = {
-                    "inv_no": f"INV{st.session_state.db['faktur_settings'].get('next_inv', 1):04d}",
-                    "nama": nama_klien,
-                    "tgl": tgl_makeup.strftime("%d/%m/%Y"),
-                    "wa": wa_klien,
-                    "alamat_mu": alamat_makeup,
-                    "jam_ready": f"{jam_m}-{jam_s}",
-                    "jam_otw": jam_o,
-                    "durasi_otw": durasi_otw,
-                    "paket_list": list(st.session_state.input_pakets),
-                    "manual_list": list(st.session_state.input_manuals),
-                    "hire_tim": hire_tim,
-                    "tim_type": tim_type,
-                    "tim_nama": tim_nama,
-                    "dp": dp_value,
-                    "status": "PENDING"
-                }
-                st.session_state.db['bookings'].append(new_booking)
-                st.session_state.db['faktur_settings']['next_inv'] += 1
-                save_data()
-                st.success(f"Jadwal {nama_klien} Berhasil Disimpan!")
-                st.session_state.input_pakets = []
-                st.session_state.input_manuals = []
-                st.rerun()
-
-# --- 3. LAYANAN ---
-elif menu == "LAYANAN":
-    st.header("💄 Master Layanan Utama")
-    with st.form("master"):
-        nl = st.text_input("Nama Paket Baru")
-        hl = st.number_input("Harga Master", min_value=0)
-        if st.form_submit_button("Tambah ke Master"):
-            st.session_state.db['master_layanan'][nl] = hl
-            save_data(); st.success("Paket tersimpan!"); st.rerun()
-    st.write("Daftar Paket Master:")
-    st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
-
-elif menu == "PROFIL & SETTING":
-    st.header("👤 Profil & Setting")
-    st.info("Fitur setting Bank & TnC menyusul di revisi berikutnya.")
-
-elif menu == "KEUANGAN":
-    st.header("💰 Laporan Keuangan")
-    st.write("Data dihitung dari job berstatus 'SELESAI (LUNAS)'.")
