@@ -8,7 +8,7 @@ from fpdf import FPDF
 # --- CONFIG HALAMAN ---
 st.set_page_config(page_title="E-Admin MUA - Elisabeth", layout="centered")
 
-# --- STYLE CSS PINK ELIS ---
+# --- STYLE CSS PINK ELIS (TETAP SAMA) ---
 st.markdown("""
     <style>
     .stApp { background-color: #F8C8DC; }
@@ -56,7 +56,7 @@ def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(st.session_state.db, f, indent=4)
 
-# --- FUNGSI DOWNLOAD PDF ---
+# --- FUNGSI PDF (VERSI PALING STABIL) ---
 def create_pdf(booking):
     pdf = FPDF()
     pdf.add_page()
@@ -70,15 +70,15 @@ def create_pdf(booking):
     pdf.cell(0, 10, f"INVOICE #{booking['inv_no']}", ln=True)
     pdf.set_font("Arial", "", 11)
     pdf.cell(0, 8, f"Klien: {booking['nama']}", ln=True)
-    pdf.cell(0, 8, f"Tanggal Acara: {booking['tgl']}", ln=True)
+    pdf.cell(0, 8, f"Tanggal: {booking['tgl']}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 8, "RINCIAN LAYANAN:", ln=True, border='B')
     pdf.set_font("Arial", "", 10)
     total_tagihan = 0
     for p in booking.get('paket_list', []):
-        sub = p['price'] * p['qty']
-        pdf.cell(0, 7, f"- {p['nama']} (x{p['qty']}): Rp {sub:,}", ln=True)
+        sub = p['price'] * p.get('qty', 1)
+        pdf.cell(0, 7, f"- {p['nama']} (x{p.get('qty', 1)}): Rp {sub:,}", ln=True)
         total_tagihan += sub
     for m in booking.get('manual_list', []):
         sub_m = m['harga'] * m.get('qty', 1)
@@ -88,12 +88,11 @@ def create_pdf(booking):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, f"TOTAL TAGIHAN: Rp {total_tagihan:,}", ln=True)
     pdf.cell(0, 8, f"DP / SUDAH DIBAYAR: Rp {booking['dp']:,}", ln=True)
-    pdf.set_text_color(200, 0, 0)
     pdf.cell(0, 8, f"SISA SALDO: Rp {total_tagihan - booking['dp']:,}", ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.ln(5)
+    pdf.ln(10)
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, f"PEMBAYARAN VIA: {st.session_state.db['profile'].get('bank', '')} {st.session_state.db['profile'].get('no_rek', '')}", ln=True)
+    pdf.cell(0, 6, f"BANK: {st.session_state.db['profile'].get('bank', '')}", ln=True)
+    pdf.cell(0, 6, f"NOREK: {st.session_state.db['profile'].get('no_rek', '')}", ln=True)
     pdf.cell(0, 6, f"A/N: {st.session_state.db['profile'].get('an', '')}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", "I", 8)
@@ -102,8 +101,8 @@ def create_pdf(booking):
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 10, st.session_state.db['faktur_settings'].get('salam', ''), ln=True, align='C')
     pdf.ln(5)
-    pdf.cell(0, 8, st.session_state.db['faktur_settings'].get('signature', ''), ln=True, align='R')
-    return pdf.output(dest='S').encode('latin-1')
+    pdf.cell(0, 10, st.session_state.db['faktur_settings'].get('signature', ''), ln=True, align='R')
+    return pdf.output(dest='S').encode('latin-1', 'replace')
 
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
@@ -123,18 +122,17 @@ menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL &
 if 'input_pakets' not in st.session_state: st.session_state.input_pakets = []
 if 'input_manuals' not in st.session_state: st.session_state.input_manuals = []
 
-# --- 1. BERANDA ---
+# --- 1. BERANDA (FIXED PDF & FILTER) ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     selected_date = st.date_input("Pilih Tanggal", value=date.today(), key="calendar_input")
     st.divider()
-    
     selected_str = selected_date.strftime("%d/%m/%Y")
     
-    # FILTER SEMUA JOB DI TANGGAL TERSEBUT
+    # Ambil semua job di hari itu
     list_job = [b for b in st.session_state.db['bookings'] if b['tgl'] == selected_str]
     
-    # URUTKAN BERDASARKAN JAM MULAI
+    # Urutkan dari jam paling pagi
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
     
     if not list_job:
@@ -151,6 +149,7 @@ if menu == "BERANDA":
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Info OTW ditaruh di bawah Schedule
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} (Durasi: {b.get("durasi_otw","-")} menit)</p>', unsafe_allow_html=True)
                 
                 c1, c2, c3 = st.columns(3)
@@ -158,11 +157,14 @@ if menu == "BERANDA":
                 if c2.button("✅ SELESAI (LUNAS)", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"; save_data(); st.rerun()
                 
-                # TOMBOL FAKTUR PDF
-                pdf_bytes = create_pdf(b)
-                c3.download_button("📄 FAKTUR", data=pdf_bytes, file_name=f"Faktur_{b['nama']}.pdf", mime="application/pdf", key=f"dl_{i}")
+                # Preview & Download PDF Faktur
+                try:
+                    pdf_data = create_pdf(b)
+                    c3.download_button(label="📄 FAKTUR", data=pdf_data, file_name=f"Faktur_{b['nama']}.pdf", mime="application/pdf", key=f"dl_{i}")
+                except:
+                    c3.error("Gagal buat PDF")
 
-# --- 2. INPUT JADWAL (TIDAK BERUBAH) ---
+# --- 2. INPUT JADWAL (TETAP SAMA SEPERTI KODE ELIS) ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
     with st.container():
