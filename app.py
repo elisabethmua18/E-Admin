@@ -24,7 +24,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- SISTEM DATABASE ANTI-ERROR ---
+# --- SISTEM DATABASE ---
 DATA_FILE = "mua_master_pro.json"
 
 def load_data():
@@ -65,10 +65,10 @@ def generate_pdf(k):
     pdf.cell(0, 5, f"WA: {st.session_state.db['profile'].get('hp', '')} | IG: {st.session_state.db['profile'].get('ig', '')}", ln=True, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, f"INVOICE #{k.get('inv_no','')}", ln=True)
+    pdf.cell(0, 10, f"INVOICE #{k.get('inv_no', '')}", ln=True)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, f"Nama Klien: {k.get('nama','')}", ln=True)
-    pdf.cell(0, 6, f"Tanggal: {k.get('tgl','')}", ln=True)
+    pdf.cell(0, 6, f"Nama Klien: {k.get('nama', '')}", ln=True)
+    pdf.cell(0, 6, f"Tanggal: {k.get('tgl', '')}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 7, "RINCIAN LAYANAN:", ln=True, border='B')
@@ -87,14 +87,17 @@ def generate_pdf(k):
     pdf.cell(0, 8, f"TOTAL TAGIHAN: Rp {total:,}", ln=True)
     pdf.cell(0, 8, f"DP / SUDAH DIBAYAR: Rp {k.get('dp', 0):,}", ln=True)
     pdf.set_text_color(200, 0, 0)
-    pdf.cell(0, 8, f"SISA SALDO TERUTANG: Rp {total - k.get('dp', 0):,}", ln=True)
+    pdf.cell(0, 8, f"SISA SALDO: Rp {total - k.get('dp', 0):,}", ln=True)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(10)
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, f"Pembayaran Via: {st.session_state.db['faktur_settings'].get('bank','')} {st.session_state.db['faktur_settings'].get('no_rek','')} a/n {st.session_state.db['faktur_settings'].get('an','')}", ln=True)
+    p_bank = st.session_state.db['faktur_settings'].get('bank', '')
+    p_norek = st.session_state.db['faktur_settings'].get('no_rek', '')
+    p_an = st.session_state.db['faktur_settings'].get('an', '')
+    pdf.cell(0, 6, f"Pembayaran Via: {p_bank} {p_norek} a/n {p_an}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", "I", 8)
-    pdf.multi_cell(0, 5, f"Terms & Conditions:\n{st.session_state.db['faktur_settings'].get('tnc','')}")
+    pdf.multi_cell(0, 5, f"TnC: {st.session_state.db['faktur_settings'].get('tnc', '')}")
     pdf.ln(5)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 10, st.session_state.db['faktur_settings'].get('salam', 'Terima Kasih!'), ln=True, align='C')
@@ -108,18 +111,19 @@ if not st.session_state.auth:
     pw = st.text_input("Password", type="password")
     if st.button("MASUK"):
         if email == "elisabethmua18@gmail.com" and pw == "Elis5173":
-            st.session_state.auth = True; st.rerun()
+            st.session_state.auth = True
+            st.rerun()
         else: st.error("Akses Ditolak!")
     st.stop()
 
 # --- MENU ---
 menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
 
-# --- 1. BERANDA (FIXED DISPLAY) ---
+# --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     c1, c2 = st.columns(2)
-    d1 = c1.date_input("Dari Tanggal", datetime.now()) # Popup kalender
+    d1 = c1.date_input("Dari Tanggal", datetime.now())
     d2 = c2.date_input("Sampai Tanggal", datetime.now())
     
     sorted_b = sorted(st.session_state.db['bookings'], key=lambda x: x.get('jam_ready', '00:00'))
@@ -142,7 +146,7 @@ if menu == "BERANDA":
                     if cols[0].button("LUNAS", key=f"lns{idx}"):
                         b['status'] = "SELESAI"; save_data(); st.rerun()
                     if cols[1].button("EDIT", key=f"edt{idx}"):
-                        st.info("Fitur edit sedang sinkronisasi")
+                        st.info("Edit via menu Input Jadwal")
                     if cols[2].button("FAKTUR", key=f"fkt{idx}"):
                         st.session_state.fkt_preview = b
                     if cols[3].button("HAPUS", key=f"del{idx}"):
@@ -154,14 +158,14 @@ if menu == "BERANDA":
         st.divider()
         st.download_button("📩 Download PDF Faktur " + k['nama'], data=generate_pdf(k), file_name=f"Faktur_{k['nama']}.pdf", mime="application/pdf")
 
-# --- 2. INPUT JADWAL (FIXED INPUTS) ---
+# --- 2. INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Catat Jadwal")
     with st.form("job_form", clear_on_submit=True):
         nama = st.text_input("Nama Klien")
         wa = st.text_input("WhatsApp")
         lokasi = st.text_area("Lokasi Acara")
-        tgl_job = st.date_input("Tanggal Acara", datetime.now()) # Popup Kalender
+        tgl_job = st.date_input("Tanggal Acara", datetime.now())
         
         times = [time(h, m).strftime("%H:%M") for h in range(24) for m in (0, 15, 30, 45)]
         c1, c2, c3 = st.columns(3)
@@ -195,5 +199,77 @@ elif menu == "INPUT JADWAL":
         dp = st.number_input("DP (Down Payment)", 0)
 
         if st.form_submit_button("SIMPAN JADWAL"):
+            next_inv = st.session_state.db['faktur_settings'].get('next_inv', 1)
             new_b = {
-                "inv_no": f"INV{st.session_state
+                "inv_no": f"INV{next_inv:04d}",
+                "nama": nama, "wa": wa, "alamat_mu": lokasi, "tgl": tgl_job.strftime("%d/%m/%Y"),
+                "jam_ready": f"{jam_m}-{jam_s}", "jam_otw": jam_otw,
+                "tim_type": tim_type, "tim_nama": tim_nama, "dp": dp,
+                "paket_list": input_pakets, "manual_list": input_manuals, "status": "PENDING"
+            }
+            st.session_state.db['bookings'].append(new_b)
+            st.session_state.db['faktur_settings']['next_inv'] = next_inv + 1
+            save_data(); st.success("Jadwal Tersimpan!"); st.rerun()
+
+# --- 3. LAYANAN ---
+elif menu == "LAYANAN":
+    st.header("💄 Master Layanan")
+    with st.form("lay_form"):
+        n_lay = st.text_input("Nama Paket")
+        h_lay = st.number_input("Harga Paket", 0)
+        if st.form_submit_button("TAMBAH PAKET"):
+            st.session_state.db['master_layanan'][n_lay] = h_lay
+            save_data(); st.rerun()
+    for n, h in st.session_state.db['master_layanan'].items():
+        st.write(f"💖 {n} : **Rp {h:,}**")
+
+# --- 4. PROFIL & SETTING ---
+elif menu == "PROFIL & SETTING":
+    st.header("👤 Profil & Setting")
+    tab1, tab2 = st.tabs(["Profil", "Faktur"])
+    with tab1:
+        st.session_state.db['profile']['nama'] = st.text_input("Nama Bisnis", st.session_state.db['profile'].get('nama', ''))
+        st.session_state.db['profile']['alamat'] = st.text_area("Alamat", st.session_state.db['profile'].get('alamat', ''))
+        st.session_state.db['profile']['hp'] = st.text_input("WhatsApp", st.session_state.db['profile'].get('hp', ''))
+        st.session_state.db['profile']['ig'] = st.text_input("Instagram", st.session_state.db['profile'].get('ig', ''))
+        if st.button("Simpan Profil"): save_data(); st.success("Profil Diperbarui!")
+    with tab2:
+        st.session_state.db['faktur_settings']['bank'] = st.text_input("Bank", st.session_state.db['faktur_settings'].get('bank', ''))
+        st.session_state.db['faktur_settings']['an'] = st.text_input("Atas Nama", st.session_state.db['faktur_settings'].get('an', ''))
+        st.session_state.db['faktur_settings']['no_rek'] = st.text_input("No Rekening", st.session_state.db['faktur_settings'].get('no_rek', ''))
+        st.session_state.db['faktur_settings']['tnc'] = st.text_area("S&K (TnC)", st.session_state.db['faktur_settings'].get('tnc', ''))
+        st.session_state.db['faktur_settings']['salam'] = st.text_input("Salam Penutup", st.session_state.db['faktur_settings'].get('salam', ''))
+        if st.button("Simpan Setting"): save_data(); st.success("Setting Faktur Diperbarui!")
+
+# --- 5. KEUANGAN ---
+elif menu == "KEUANGAN":
+    st.header("💰 Laporan Keuangan")
+    bln = st.selectbox("Bulan", [f"{i:02d}" for i in range(1, 13)], index=int(datetime.now().month)-1)
+    thn = st.selectbox("Tahun", ["2025", "2026"], index=1)
+    
+    t_omset = 0
+    st.subheader("📊 Rincian Omset")
+    for b in st.session_state.db['bookings']:
+        if b['tgl'].split("/")[1] == bln and b['tgl'].split("/")[2] == thn:
+            total = sum([p['price']*p.get('qty',1) for p in b['paket_list']]) + sum([m['harga']*m.get('qty',1) for m in b.get('manual_list',[])])
+            st.write(f"✅ {b['tgl']} | {b['nama']} : **Rp {total:,}**")
+            t_omset += total
+    
+    st.divider()
+    st.subheader("📉 Rincian Pengeluaran")
+    with st.expander("Tambah Pengeluaran"):
+        e_ket = st.text_input("Keterangan")
+        e_nom = st.number_input("Nominal", 0)
+        if st.button("Tambah"):
+            st.session_state.db['pengeluaran'].append({"ket": e_ket, "nominal": e_nom, "bulan": bln, "tahun": thn})
+            save_data(); st.rerun()
+            
+    t_exp = sum([e['nominal'] for e in st.session_state.db['pengeluaran'] if e['bulan'] == bln and e['tahun'] == thn])
+    for e in st.session_state.db['pengeluaran']:
+        if e['bulan'] == bln and e['tahun'] == thn:
+            st.write(f"❌ {e['ket']} : **Rp {e['nominal']:,}**")
+            
+    st.divider()
+    st.metric("TOTAL OMSET", f"Rp {t_omset:,}")
+    st.metric("TOTAL PENGELUARAN", f"Rp {t_exp:,}")
+    st.metric("NETT PROFIT", f"Rp {t_omset - t_exp:,}")
