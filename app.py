@@ -114,6 +114,7 @@ if menu == "BERANDA":
 <p style="margin:5px 0;">
 <b>Status:</b> {b.get('status','PENDING')}
 </p>
+</p>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
