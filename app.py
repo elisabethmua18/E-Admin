@@ -447,7 +447,7 @@ elif menu == "KEUANGAN":
     # Hitung Total Manual
     total_in_lain = sum([float(p['nom']) for p in st.session_state.db.get('pemasukan_lain', []) if p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year])
     # Versi aman yang tidak akan error jika ada data kosong
-        total_out = sum([
+    total_out = sum([
             float(p.get('nom', 0)) 
             for p in st.session_state.db.get('pengeluaran', []) 
             if 'tgl' in p and len(p['tgl'].split('/')) > 2 and p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year
