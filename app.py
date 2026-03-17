@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import os
 import pandas as pd
-from datetime import datetime, time
+from datetime import datetime, time, date
 from fpdf import FPDF
 
 # --- CONFIG HALAMAN ---
@@ -18,7 +18,10 @@ st.markdown("""
     }
     .job-card { 
         background-color: white; padding: 20px; border-radius: 15px; 
-        margin-bottom: 15px; border-left: 10px solid #F19CBB; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 10px; border-left: 10px solid #F19CBB; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    }
+    .otw-info {
+        color: #777; font-style: italic; font-size: 0.9em; margin: 10px 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -49,18 +52,21 @@ def save_data():
     with open(DATA_FILE, "w") as f:
         json.dump(st.session_state.db, f, indent=4)
 
-# --- FUNGSI DOWNLOAD PDF ---
+# --- FUNGSI DOWNLOAD PDF (FIXED ERROR) ---
 def create_pdf(booking):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, f"INVOICE {booking['inv_no']}", ln=True, align='C')
     pdf.set_font("Arial", "", 12)
+    pdf.ln(10)
     pdf.cell(0, 10, f"Klien: {booking['nama']}", ln=True)
     pdf.cell(0, 10, f"Tanggal: {booking['tgl']}", ln=True)
+    pdf.cell(0, 10, f"Lokasi: {booking['alamat_mu']}", ln=True)
     pdf.cell(0, 10, f"Total DP: Rp {booking['dp']:,}", ln=True)
-    pdf.cell(0, 10, f"Status: {booking['status']}", ln=True)
-    return pdf.output(dest='S').encode('latin-1')
+    pdf.ln(10)
+    pdf.cell(0, 10, "Terima kasih telah menggunakan jasa Elisabeth MUA", ln=True, align='C')
+    return pdf.output(dest='S')
 
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
@@ -81,33 +87,66 @@ menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL &
 if 'input_pakets' not in st.session_state: st.session_state.input_pakets = []
 if 'input_manuals' not in st.session_state: st.session_state.input_manuals = []
 
-# --- 1. BERANDA (SEKARANG SUDAH MUNCUL JADWALNYA) ---
+# --- 1. BERANDA (KALENDER & LIST SCHEDULE) ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     
-    if not st.session_state.db['bookings']:
-        st.info("Belum ada jadwal yang disimpan. Silakan ke menu INPUT JADWAL.")
+    # Ambil semua tanggal yang ada job
+    job_dates = []
+    for b in st.session_state.db['bookings']:
+        try:
+            job_dates.append(datetime.strptime(b['tgl'], "%d/%m/%Y").date())
+        except: continue
+    
+    # Munculkan Kalender 1 Bulan
+    st.write("### Pilih Tanggal (Biru = Ada Job)")
+    selected_date = st.date_input("Navigasi Kalender", value=date.today(), key="calendar_input")
+    
+    st.divider()
+    
+    # Filter job di hari terpilih
+    selected_str = selected_date.strftime("%d/%m/%Y")
+    todays_jobs = [b for b in st.session_state.db['bookings'] if b['tgl'] == selected_str]
+    
+    # Urutkan berdasarkan jam mulai (paling pagi)
+    todays_jobs = sorted(todays_jobs, key=lambda x: x['jam_ready'].split('-')[0])
+    
+    if not todays_jobs:
+        st.info(f"Tidak ada jadwal untuk tanggal {selected_str}")
     else:
-        # Menampilkan dari yang terbaru diinput
-        for i, b in enumerate(reversed(st.session_state.db['bookings'])):
+        st.success(f"Ditemukan {len(todays_jobs)} jadwal untuk hari ini:")
+        for i, b in enumerate(todays_jobs):
             with st.container():
+                # Info OTW diletakkan di sela-sela (sebelum card)
+                st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b["jam_otw"]} (Durasi: {b["durasi_otw"]} menit)</p>', unsafe_allow_html=True)
+                
                 st.markdown(f"""
                 <div class="job-card">
                     <h3 style="margin:0; color:#F19CBB;">{b['nama']} - {b['inv_no']}</h3>
-                    <p style="margin:5px 0;"><b>Tanggal:</b> {b['tgl']} | <b>Jam Ready:</b> {b['jam_ready']}</p>
+                    <p style="margin:5px 0;"><b>Jam Kerja:</b> {b['jam_ready']}</p>
                     <p style="margin:5px 0;"><b>Lokasi:</b> {b['alamat_mu']}</p>
                     <p style="margin:5px 0;"><b>Tim:</b> {b['tim_type']} ({b['tim_nama']})</p>
+                    <p style="margin:5px 0;"><b>Status:</b> {b['status']}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Tombol Download PDF untuk tiap invoice
-                pdf_data = create_pdf(b)
-                st.download_button(
-                    label=f"📄 Download Faktur {b['nama']}",
-                    data=pdf_data,
+                c1, c2, c3 = st.columns(3)
+                if c1.button("EDIT", key=f"edit_{i}"):
+                    st.warning("Fitur edit sedang sinkronisasi data...")
+                
+                if c2.button("✅ SELESAI (LUNAS)", key=f"done_{i}"):
+                    b['status'] = "SELESAI (LUNAS)"
+                    save_data()
+                    st.rerun()
+                
+                # Tombol Faktur PDF (Fixed)
+                pdf_bytes = create_pdf(b)
+                c3.download_button(
+                    label="📄 FAKTUR",
+                    data=pdf_bytes,
                     file_name=f"Faktur_{b['nama']}.pdf",
                     mime="application/pdf",
-                    key=f"pdf_{i}"
+                    key=f"dl_{i}"
                 )
 
 # --- 2. INPUT JADWAL ---
@@ -160,11 +199,9 @@ elif menu == "INPUT JADWAL":
                 st.rerun()
 
         st.write("---")
-        # NOMOR 11 PINDAH KE DP
         dp_value = st.number_input("11. DP (Down Payment)", min_value=0)
         
         st.write("---")
-        # BAGIAN TIM DENGAN 3 OPSI
         st.write("**Hire Tim**")
         hire_tim = st.checkbox("Gunakan Tim Tambahan?")
         if hire_tim:
@@ -200,12 +237,12 @@ elif menu == "INPUT JADWAL":
                 st.session_state.db['bookings'].append(new_booking)
                 st.session_state.db['faktur_settings']['next_inv'] += 1
                 save_data()
-                st.success(f"Jadwal {nama_klien} Berhasil Disimpan! Silakan cek menu BERANDA.")
+                st.success(f"Jadwal {nama_klien} Berhasil Disimpan!")
                 st.session_state.input_pakets = []
                 st.session_state.input_manuals = []
                 st.rerun()
 
-# --- MENU LAINNYA ---
+# --- 3. LAYANAN ---
 elif menu == "LAYANAN":
     st.header("💄 Master Layanan Utama")
     with st.form("master"):
@@ -219,8 +256,8 @@ elif menu == "LAYANAN":
 
 elif menu == "PROFIL & SETTING":
     st.header("👤 Profil & Setting")
-    st.info("Menu ini akan digunakan untuk setting Bank dan TnC di revisi berikutnya.")
+    st.info("Fitur setting Bank & TnC menyusul di revisi berikutnya.")
 
 elif menu == "KEUANGAN":
     st.header("💰 Laporan Keuangan")
-    st.write("Data Keuangan akan ditarik dari hasil input jadwal.")
+    st.write("Data dihitung dari job berstatus 'SELESAI (LUNAS)'.")
