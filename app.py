@@ -397,18 +397,18 @@ elif menu == "PROFIL & SETTING":
         st.subheader("Logo Bisnis")
         import base64
 
-logo_file = st.file_uploader("Upload Logo", type=["png","jpg","jpeg"])
+        logo_file = st.file_uploader("Upload Logo", type=["png","jpg","jpeg"])
 
-if logo_file is not None:
-    logo_base64 = base64.b64encode(logo_file.read()).decode()
+        if logo_file is not None:
+        logo_base64 = base64.b64encode(logo_file.read()).decode()
 
-    st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
+        st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
 
-    save_db(st.session_state.db)
+        save_db(st.session_state.db)
 
-    st.success("Logo berhasil disimpan")
+        st.success("Logo berhasil disimpan")
             
-    st.divider()
+        st.divider()
         st.subheader("Informasi Rekening")
         st.session_state.db['profile']['bank'] = st.text_input("Nama Bank", st.session_state.db['profile'].get('bank', ''))
         st.session_state.db['profile']['no_rek'] = st.text_input("Nomor Rekening", st.session_state.db['profile'].get('no_rek', ''))
