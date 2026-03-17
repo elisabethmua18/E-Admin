@@ -400,13 +400,13 @@ elif menu == "PROFIL & SETTING":
         logo_file = st.file_uploader("Upload Logo", type=["png","jpg","jpeg"])
 
         if logo_file is not None:
-        logo_base64 = base64.b64encode(logo_file.read()).decode()
+            logo_base64 = base64.b64encode(logo_file.read()).decode()
 
-        st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
+            st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
 
-        save_db(st.session_state.db)
+            save_db(st.session_state.db)
 
-        st.success("Logo berhasil disimpan")
+            st.success("Logo berhasil disimpan")
             
         st.divider()
         st.subheader("Informasi Rekening")
