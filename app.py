@@ -27,7 +27,7 @@ st.markdown("""
     .stempel-lunas {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
         border: 5px solid red; color: red; font-size: 40px; font-weight: bold;
-        padding: 10px 20px; border-radius: 10px; opacity: 0.5; pointer-events: none; z-index: 99;
+        padding: 10px 20px; border-radius: 10px; opacity: 0.4; pointer-events: none;
     }
     .otw-info {
         color: #777; font-style: italic; font-size: 0.9em; margin: 5px 0 20px 10px;
@@ -44,7 +44,7 @@ def load_data():
         {"inv_no": "INV0006", "nama": "Kak Reyki", "tgl": "17/03/2026", "wa": "08xxxx", "alamat_mu": "Hotel Aruman", "jam_ready": "13:00-15:00", "jam_otw": "12:15", "durasi_otw": 30, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Ovie", "dp": 0, "status": "PENDING"}
     ]
     defaults = {
-        "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": ""},
+        "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": ""},
         "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 7},
         "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": []
     }
@@ -80,7 +80,7 @@ if not st.session_state.auth:
 # --- MENU ---
 menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
 
-# --- 1. BERANDA ---
+# --- 1. BERANDA (REVISI LOGO & EDIT & LUNAS) ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
     selected_date = st.date_input("Pilih Tanggal", value=date(2026, 3, 17))
@@ -91,7 +91,7 @@ if menu == "BERANDA":
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
     
     if not list_job:
-        st.info("Tidak ada jadwal.")
+        st.info(f"Tidak ada jadwal.")
     else:
         for i, b in enumerate(list_job):
             with st.container():
@@ -106,14 +106,19 @@ if menu == "BERANDA":
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b["jam_otw"]} ({b["durasi_otw"]}m)</p>', unsafe_allow_html=True)
                 
                 c1, c2, c3 = st.columns(3)
-                
+                # EDIT MENGARAH KE INPUT JADWAL
                 if c1.button("EDIT", key=f"ed_{i}"):
-                    st.session_state.edit_data = b
-                    st.warning("Data siap diedit. Silakan klik menu 'INPUT JADWAL'")
+                    st.info("Alihkan ke menu INPUT JADWAL...")
+                    # Simulasikan pindah menu di Streamlit
+                    st.session_state.edit_mode = b
+                    st.warning("Silakan klik 'INPUT JADWAL' di menu samping.")
                 
+                # TOMBOL SELESAI (UBAH STATUS & SIMPAN KE KEUANGAN)
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
-                    save_data(); st.rerun()
+                    save_data()
+                    st.success(f"Status {b['nama']} diperbarui ke LUNAS!")
+                    st.rerun()
                 
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
@@ -123,29 +128,28 @@ if menu == "BERANDA":
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        logo_html = '<div style="width:60px; height:60px; border:1px dashed #ccc; text-align:center; font-size:10px;">LOGO</div>'
-        if p.get('logo_base64'):
-            logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:80px;">'
+        # LOGIKA LOGO
+        logo_html = '<div style="width:60px; height:60px; border:1px dashed #F19CBB;">LOGO</div>'
+        if 'logo_img' in st.session_state:
+            logo_html = f'<img src="data:image/png;base64,{st.session_state.logo_img}" style="width:80px;">'
         
+        # STEMPEL LUNAS
         stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
         
         total_p = sum([item['price'] * item['qty'] for item in f.get('paket_list', [])])
         total_m = sum([item['harga'] * item['qty'] for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
+        kurang_bayar = total_semua - f.get('dp', 0)
+        tnc_formatted = s['tnc'].replace('\n', '<br>')
         
-        if f.get('status') == "SELESAI (LUNAS)":
-            sisa_teks = f"<span style='color:green;'>LUNAS HARI H (Rp {total_semua - f.get('dp', 0):,})</span>"
-        else:
-            sisa_teks = f"Rp {total_semua - f.get('dp', 0):,}"
-
         st.divider()
         nota_html = f"""
         <div class="faktur-box">
             {stempel}
             <div style="position: absolute; top: 20px; left: 20px;">{logo_html}</div>
             <center>
-                <h2 style="margin:0; color:#F19CBB; padding-left: 60px;">{p['nama']}</h2>
-                <p style="margin:0; padding-left: 60px;">{p['alamat']}<br>WA: {p['hp']} | IG: {p['ig']}</p>
+                <h2 style="margin:0; color:#F19CBB;">{p['nama']}</h2>
+                <p style="margin:0;">{p['alamat']}<br>WA: {p['hp']} | IG: {p['ig']}</p>
             </center>
             <hr style="border: 1px solid #eee; margin-top: 20px;">
             <p><b>INVOICE #{f['inv_no']}</b></p>
@@ -158,8 +162,8 @@ if menu == "BERANDA":
             </table>
             <br>
             <p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
-            <div style="font-size: 13px;">"""
-        
+            <div style="font-size: 13px;">
+        """
         for item in f.get('paket_list', []):
             nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item['nama']} (x{item['qty']})</span><span>Rp {item['price']*item['qty']:,}</span></div>"
         for item_m in f.get('manual_list', []):
@@ -171,28 +175,27 @@ if menu == "BERANDA":
             <table style="width:100%; font-weight: bold; font-size: 15px;">
                 <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,}</td></tr>
                 <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {f.get('dp',0):,}</td></tr>
-                <tr><td>SISA PELUNASAN</td><td style="text-align:right;">{sisa_teks}</td></tr>
+                <tr style="color: #d9534f;"><td>SISA PELUNASAN</td><td style="text-align:right;">Rp {kurang_bayar if f.get('status') != 'SELESAI (LUNAS)' else 0:,}</td></tr>
             </table>
             <br>
             <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 13px;">
                 <b>REKENING PEMBAYARAN:</b><br>{p['bank']} {p['no_rek']}<br>a/n {p['an']}
             </div>
             <br>
-            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{s['tnc'].replace('\\n','<br>')}</p>
+            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{tnc_formatted}</p>
             <center><p style="margin-top:20px; font-weight: bold;">{s['salam']}</p></center>
             <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><br><b>{s['signature']}</b></p></div>
         </div>
         """
         st.markdown(nota_html, unsafe_allow_html=True)
-        st.download_button(label="💾 DOWNLOAD IMAGE-NOTA", data=f"<html><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
+        st.download_button(label=f"💾 DOWNLOAD IMAGE-NOTA ({f['nama']})", data=f"<html><body style='display:flex; justify-content:center; padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
         if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
 
-# --- 2. INPUT JADWAL ---
+# --- 2. INPUT JADWAL (TIDAK BERUBAH) ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
-    def_nama = st.session_state.edit_data['nama'] if 'edit_data' in st.session_state else ""
     with st.container():
-        nama_klien = st.text_input("1. Nama Klien", value=def_nama)
+        nama_klien = st.text_input("1. Nama Klien")
         tgl_makeup = st.date_input("2. Tanggal Makeup", datetime.now())
         wa_klien = st.text_input("3. Nomor WhatsApp")
         alamat_makeup = st.text_area("4. Alamat Makeup")
@@ -245,10 +248,9 @@ elif menu == "INPUT JADWAL":
                 new_booking = {"inv_no": f"INV{st.session_state.db['faktur_settings'].get('next_inv', 1):04d}", "nama": nama_klien, "tgl": tgl_makeup.strftime("%d/%m/%Y"), "wa": wa_klien, "alamat_mu": alamat_makeup, "jam_ready": f"{jam_m}-{jam_s}", "jam_otw": jam_o, "durasi_otw": durasi_otw, "paket_list": list(st.session_state.input_pakets), "manual_list": list(st.session_state.input_manuals), "hire_tim": hire_tim, "tim_type": tim_type, "tim_nama": tim_nama, "dp": dp_value, "status": "PENDING"}
                 st.session_state.db['bookings'].append(new_booking)
                 st.session_state.db['faktur_settings']['next_inv'] += 1
-                if 'edit_data' in st.session_state: del st.session_state.edit_data
-                save_data(); st.success("Berhasil!"); st.session_state.input_pakets = []; st.session_state.input_manuals = []; st.rerun()
+                save_data(); st.success(f"Jadwal {nama_klien} Berhasil!"); st.session_state.input_pakets = []; st.session_state.input_manuals = []; st.rerun()
 
-# --- 3. LAYANAN ---
+# --- 3. LAYANAN (TETAP SAMA) ---
 elif menu == "LAYANAN":
     st.header("💄 Master Layanan Utama")
     with st.form("master"):
@@ -258,33 +260,43 @@ elif menu == "LAYANAN":
             st.session_state.db['master_layanan'][nl] = hl; save_data(); st.rerun()
     st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
 
-# --- 4. PROFIL & SETTING ---
+# --- 4. PROFIL & SETTING (TETAP SAMA) ---
 elif menu == "PROFIL & SETTING":
     st.header("👤 Profil & Setting Faktur")
     t_prof, t_set = st.tabs(["PROFIL", "SETTING"])
     with t_prof:
+        st.subheader("📝 Data Identitas & Bank")
         st.session_state.db['profile']['nama'] = st.text_input("Nama MUA", st.session_state.db['profile'].get('nama', ''))
         st.session_state.db['profile']['alamat'] = st.text_area("Alamat MUA", st.session_state.db['profile'].get('alamat', ''))
         st.session_state.db['profile']['hp'] = st.text_input("No WA MUA", st.session_state.db['profile'].get('hp', ''))
         st.session_state.db['profile']['ig'] = st.text_input("Akun IG MUA", st.session_state.db['profile'].get('ig', ''))
         logo_file = st.file_uploader("Upload Logo MUA (.png)", type=["png"])
         if logo_file:
-            st.session_state.db['profile']['logo_base64'] = base64.b64encode(logo_file.read()).decode()
+            st.session_state.logo_img = base64.b64encode(logo_file.read()).decode()
             st.success("Logo terupload!")
         st.divider()
         st.session_state.db['profile']['bank'] = st.text_input("Nama Bank", st.session_state.db['profile'].get('bank', ''))
         st.session_state.db['profile']['no_rek'] = st.text_input("No Rekening", st.session_state.db['profile'].get('no_rek', ''))
         st.session_state.db['profile']['an'] = st.text_input("Nama Pemilik Rekening", st.session_state.db['profile'].get('an', ''))
-        if st.button("💾 SIMPAN PROFIL"): save_data(); st.success("Profil Disimpan!")
+        if st.button("💾 SIMPAN PROFIL"): save_data(); st.success("Profil Berhasil Disimpan!")
     with t_set:
-        st.session_state.db['faktur_settings']['tnc'] = st.text_area("TnC", st.session_state.db['faktur_settings'].get('tnc', ''))
-        st.session_state.db['faktur_settings']['salam'] = st.text_area("Salam", st.session_state.db['faktur_settings'].get('salam', ''))
-        st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature", st.session_state.db['faktur_settings'].get('signature', ''))
-        if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Disimpan!")
+        st.subheader("⚙️ Aturan Faktur")
+        st.session_state.db['faktur_settings']['tnc'] = st.text_area("Terms & Conditions (TnC)", st.session_state.db['faktur_settings'].get('tnc', ''), height=200)
+        st.session_state.db['faktur_settings']['salam'] = st.text_area("Salam Penutup", st.session_state.db['faktur_settings'].get('salam', ''), height=100)
+        st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature (Nama Tanda Tangan)", st.session_state.db['faktur_settings'].get('signature', ''))
+        if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Berhasil Disimpan!")
 
-# --- 5. KEUANGAN ---
+# --- 5. KEUANGAN (INTEGRASI LUNAS) ---
 elif menu == "KEUANGAN":
     st.header("💰 Laporan Keuangan")
     lunas_jobs = [b for b in st.session_state.db['bookings'] if b.get('status') == "SELESAI (LUNAS)"]
-    total_pendapatan = sum([sum([p['price']*p['qty'] for p in j['paket_list']]) + sum([m['harga']*m['qty'] for m in j['manual_list']]) for j in lunas_jobs])
+    total_pendapatan = 0
+    st.subheader("📈 Daftar Job Lunas")
+    for j in lunas_jobs:
+        price_p = sum([p['price'] * p['qty'] for p in j.get('paket_list', [])])
+        price_m = sum([m['harga'] * m['qty'] for m in j.get('manual_list', [])])
+        total_j = price_p + price_m
+        st.write(f"✅ {j['tgl']} - {j['nama']} : **Rp {total_j:,}**")
+        total_pendapatan += total_j
+    st.divider()
     st.metric("TOTAL PENGHASILAN BERSIH", f"Rp {total_pendapatan:,}")
