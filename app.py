@@ -39,13 +39,10 @@ st.markdown("""
 DATA_FILE = "mua_master_pro.json"
 
 def load_data():
-    initial_bookings = [
-        {"inv_no": "INV0005", "nama": "Kak Angel", "tgl": "17/03/2026", "wa": "08xxxx", "alamat_mu": "Tembalang", "jam_ready": "14:00-16:00", "jam_otw": "16:15", "durasi_otw": 15, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Selly", "dp": 0, "status": "PENDING"},
-        {"inv_no": "INV0006", "nama": "Kak Reyki", "tgl": "17/03/2026", "wa": "08xxxx", "alamat_mu": "Hotel Aruman", "jam_ready": "13:00-15:00", "jam_otw": "12:15", "durasi_otw": 30, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Ovie", "dp": 0, "status": "PENDING"}
-    ]
+    initial_bookings = []
     defaults = {
         "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": ""},
-        "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 7},
+        "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 1},
         "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": []
     }
     if os.path.exists(DATA_FILE):
@@ -68,10 +65,10 @@ def save_data():
 # --- MENU ---
 menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
 
-# --- 1. BERANDA (REVISI LOGO & EDIT) ---
+# --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
-    selected_date = st.date_input("Pilih Tanggal", value=date(2026, 3, 17))
+    selected_date = st.date_input("Pilih Tanggal", value=date.today())
     st.divider()
     
     selected_str = selected_date.strftime("%d/%m/%Y")
@@ -79,7 +76,7 @@ if menu == "BERANDA":
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
     
     if not list_job:
-        st.info("Tidak ada jadwal.")
+        st.info("Tidak ada jadwal untuk tanggal ini.")
     else:
         for i, b in enumerate(list_job):
             with st.container():
@@ -94,12 +91,11 @@ if menu == "BERANDA":
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
                 
                 c1, c2, c3 = st.columns(3)
-                
                 if c1.button("EDIT", key=f"ed_{i}"):
                     st.session_state.edit_data = b
                     st.session_state.input_pakets = b.get('paket_list', [])
                     st.session_state.input_manuals = b.get('manual_list', [])
-                    st.warning("Data dimuat! Silakan klik tab 'INPUT JADWAL'")
+                    st.warning("Data dimuat! Silakan buka menu 'INPUT JADWAL'")
                 
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
@@ -108,26 +104,23 @@ if menu == "BERANDA":
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
+    # --- POPUP PREVIEW FAKTUR ---
     if 'current_faktur' in st.session_state:
         f = st.session_state.current_faktur
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        logo_html = ""
-        if p.get('logo_base64'):
-            logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px; position: absolute; left: 10px; top: 10px;">'
-        
+        logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px; position: absolute; left: 10px; top: 10px;">' if p.get('logo_base64') else ""
         stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
         
-        # Hitung dengan pengamanan jika data None
         total_p = sum([(item.get('price',0) * item.get('qty',1)) for item in f.get('paket_list', [])])
         total_m = sum([(item.get('harga',0) * item.get('qty',1)) for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
         dp_val = f.get('dp', 0)
-        
-        sisa_teks = f"Rp {total_semua - dp_val:,}"
-        if f.get('status') == "SELESAI (LUNAS)":
-            sisa_teks = f"<span style='color:green;'>LUNAS HARI H (Rp {total_semua - dp_val:,})</span>"
+        sisa = total_semua - dp_val
+
+        # Perbaikan Format TnC agar berbaris kebawah
+        tnc_formatted = s.get('tnc','').replace('\n', '<br>')
 
         st.divider()
         nota_html = f"""
@@ -151,34 +144,38 @@ if menu == "BERANDA":
             </table>
             <br>
             <p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
-            <div style="font-size: 13px;">"""
-        
+            <div style="font-size: 13px;">
+        """
         for item in f.get('paket_list', []):
             nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {item.get('price',0)*item.get('qty',1):,}</span></div>"
         for item_m in f.get('manual_list', []):
             nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {item_m.get('harga',0)*item_m.get('qty',1):,}</span></div>"
         
-        nota_html += f"""</div>
+        nota_html += f"""
+            </div>
             <hr style="border: 1px dashed #eee; margin: 15px 0;">
             <table style="width:100%; font-weight: bold; font-size: 15px;">
                 <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,}</td></tr>
                 <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {dp_val:,}</td></tr>
-                <tr><td>SISA PELUNASAN</td><td style="text-align:right;">{sisa_teks}</td></tr>
+                <tr><td>SISA PELUNASAN</td><td style="text-align:right; color:{'green' if sisa<=0 else 'red'};">Rp {sisa:,}</td></tr>
             </table>
             <br>
             <div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px;">
                 <b>REKENING PEMBAYARAN:</b><br>{p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}
             </div>
             <br>
-            <p style="font-size:11px; color: #555;"><b>S&K:</b><br>{s.get('tnc','').replace('\\n','<br>')}</p>
+            <p style="font-size:11px; color: #555;"><b>S&K:</b><br>{tnc_formatted}</p>
             <center><p style="margin-top:20px; font-weight: bold;">{s.get('salam','')}</p></center>
             <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s.get('signature','')}</b></p></div>
-        </div>"""
+        </div>
+        """
         st.markdown(nota_html, unsafe_allow_html=True)
-        st.download_button(label="💾 DOWNLOAD IMAGE-NOTA", data=f"<html><body>{nota_html}</body></html>", file_name=f"Invoice_{f.get('nama','klien')}.html", mime="text/html")
+        
+        # Tombol Download PDF/HTML yang lebih bersih
+        st.download_button(label="💾 DOWNLOAD NOTA (HTML)", data=nota_html, file_name=f"Invoice_{f.get('nama','klien')}.html", mime="text/html")
         if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
 
-# --- 2. INPUT JADWAL ---
+# --- 2. INPUT JADWAL (TIDAK BERUBAH) ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
     edit_data = st.session_state.get('edit_data', {})
@@ -235,7 +232,6 @@ elif menu == "INPUT JADWAL":
         if st.button("💾 SIMPAN JADWAL KE DATABASE"):
             if not nama_klien: st.error("Nama Klien wajib diisi!")
             else:
-                # Jika sedang edit, hapus data lama dulu sebelum ganti baru
                 if edit_data:
                     st.session_state.db['bookings'] = [b for b in st.session_state.db['bookings'] if b.get('inv_no') != edit_data.get('inv_no')]
                 
@@ -252,7 +248,7 @@ elif menu == "INPUT JADWAL":
                 if 'edit_data' in st.session_state: del st.session_state.edit_data
                 save_data(); st.success("Tersimpan!"); st.session_state.input_pakets = []; st.session_state.input_manuals = []; st.rerun()
 
-# --- 3. LAYANAN ---
+# --- 3. LAYANAN (TIDAK BERUBAH) ---
 elif menu == "LAYANAN":
     st.header("💄 Master Layanan Utama")
     with st.form("master"):
@@ -262,7 +258,7 @@ elif menu == "LAYANAN":
             st.session_state.db['master_layanan'][nl] = hl; save_data(); st.rerun()
     st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
 
-# --- 4. PROFIL & SETTING ---
+# --- 4. PROFIL & SETTING (TIDAK BERUBAH) ---
 elif menu == "PROFIL & SETTING":
     st.header("👤 Profil & Setting Faktur")
     t_prof, t_set = st.tabs(["PROFIL", "SETTING"])
@@ -286,47 +282,60 @@ elif menu == "PROFIL & SETTING":
         st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature", st.session_state.db['faktur_settings'].get('signature', ''))
         if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Disimpan!")
 
-# --- 5. KEUANGAN (FIXED ERROR) ---
+# --- 5. KEUANGAN (AUTO TRACKING) ---
 elif menu == "KEUANGAN":
-    st.header("💰 Laporan Keuangan")
+    st.header("💰 Laporan Keuangan Otomatis")
     c1, c2 = st.columns(2)
-    sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=2)
-    sel_year = c2.selectbox("Pilih Tahun", ["2025","2026","2027"], index=1)
+    sel_month = c1.selectbox("Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
+    sel_year = c2.selectbox("Tahun", ["2025","2026","2027"], index=1)
+
+    pemasukan_list = []
     
-    # HITUNG OMSET (Pengamanan Tanggal)
-    omset = 0
-    for j in st.session_state.db['bookings']:
-        if j.get('status') == "SELESAI (LUNAS)":
-            tgl_parts = j.get('tgl','').split('/')
-            if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year:
-                p_sum = sum([p.get('price',0)*p.get('qty',1) for p in j.get('paket_list',[])])
-                m_sum = sum([m.get('harga',0)*m.get('qty',1) for m in j.get('manual_list',[])])
-                omset += (p_sum + m_sum)
+    # Otomatis Ambil Data dari Bookings
+    for b in st.session_state.db['bookings']:
+        tgl_parts = b.get('tgl','').split('/')
+        if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year:
+            # 1. Catat DP (Selama DP > 0)
+            if b.get('dp', 0) > 0:
+                pemasukan_list.append({"Tgl": b['tgl'], "Ket": f"DP {b['nama']} ({b['inv_no']})", "Nom": b['dp']})
+            
+            # 2. Catat Pelunasan (Jika status Selesai)
+            if b.get('status') == "SELESAI (LUNAS)":
+                total_p = sum([p.get('price',0)*p.get('qty',1) for p in b.get('paket_list',[])])
+                total_m = sum([m.get('harga',0)*m.get('qty',1) for m in b.get('manual_list',[])])
+                sisa = (total_p + total_m) - b.get('dp', 0)
+                if sisa > 0:
+                    pemasukan_list.append({"Tgl": b['tgl'], "Ket": f"Pelunasan {b['nama']} ({b['inv_no']})", "Nom": sisa})
+
+    total_in = sum([x['Nom'] for x in pemasukan_list])
     
-    st.write("---")
-    st.subheader("支出 Pengeluaran Manual")
-    with st.form("pengeluaran_form"):
-        ket_out = st.text_input("Keterangan Pengeluaran")
-        nom_out = st.number_input("Nominal (Rp)", min_value=0)
-        if st.form_submit_button("Tambah Pengeluaran"):
-            st.session_state.db['pengeluaran'].append({"tgl": date.today().strftime("%d/%m/%Y"), "ket": ket_out, "nom": nom_out})
-            save_data(); st.rerun()
-    
-    # HITUNG PENGELUARAN
-    total_out = 0
+    # Ambil Data Pengeluaran Manual
     filtered_out = []
     for p in st.session_state.db.get('pengeluaran', []):
         tgl_p = p.get('tgl','').split('/')
         if len(tgl_p) == 3 and tgl_p[1] == sel_month and tgl_p[2] == sel_year:
-            total_out += p.get('nom', 0)
             filtered_out.append(p)
-    
+    total_out = sum([p.get('nom', 0) for p in filtered_out])
+
     st.divider()
-    col1, col2, col3 = st.columns(3)
-    col1.metric("OMSET (Bruto)", f"Rp {omset:,}")
-    col2.metric("PENGELUARAN", f"Rp {total_out:,}")
-    col3.metric("NETT (Bersih)", f"Rp {omset - total_out:,}")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("TOTAL PEMASUKAN", f"Rp {total_in:,}")
+    m2.metric("TOTAL PENGELUARAN", f"Rp {total_out:,}")
+    m3.metric("LABA BERSIH", f"Rp {total_in - total_out:,}")
+
+    st.write("### 📈 Detail Pemasukan (Auto)")
+    if pemasukan_list:
+        st.table(pd.DataFrame(pemasukan_list))
+    else: st.info("Belum ada pemasukan bulan ini.")
+
+    st.write("### 📉 Detail Pengeluaran (Manual)")
+    with st.expander("Tambah Pengeluaran Baru"):
+        with st.form("out_form"):
+            ket_o = st.text_input("Keterangan")
+            nom_o = st.number_input("Nominal", min_value=0)
+            if st.form_submit_button("Simpan"):
+                st.session_state.db['pengeluaran'].append({"tgl": date.today().strftime("%d/%m/%Y"), "ket": ket_o, "nom": nom_o})
+                save_data(); st.rerun()
     
     if filtered_out:
-        st.write("**Detail Pengeluaran:**")
         st.table(pd.DataFrame(filtered_out))
