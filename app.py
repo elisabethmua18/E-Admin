@@ -151,10 +151,16 @@ if menu == "BERANDA":
                         <div style="position:absolute;top:20px;right:20px;border:3px solid {warna_tema};color:{warna_tema};padding:5px;transform:rotate(-15deg);">{stempel_text}</div>
                         <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
                 
-                        <center>
-                            <h2 style="color:#F19CBB;margin:0;">{p.get('nama')}</h2>
-                            <p style="font-size:12px;color:#777;margin:0;">{p.get('alamat')}<br>WA: {p.get('hp')}</p>
-                        </center>
+                        <div style="display:flex; align-items:center; gap:10px;">
+    <img src="{p.get('logo','')}" style="height:50px;">
+    <div>
+        <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
+        <p style="margin:0; font-size:11px; color:#888;">
+            {p.get('alamat','')}<br>
+            WA: {p.get('hp','')}
+        </p>
+    </div>
+</div>
                 
                         <hr>
                 
