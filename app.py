@@ -100,9 +100,25 @@ if menu == "BERANDA":
             with st.container():
                 st.markdown(f"""
                 <div class="job-card">
-                    <h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
-                    <p style="margin:5px 0;"><b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}</p>
-                    <p style="margin:5px 0;"><b>Status:</b> {b.get('status','PENDING')}</p>
+                    <h3 style="margin:0; color:#F19CBB;">
+{b.get('nama','-')} - {b.get('inv_no','-')}
+</h3>
+
+<p style="margin:5px 0;">
+<b>Tim:</b> {b.get('tim','-')} 
+| 
+<b>Jenis:</b> {b.get('jenis_tim','-')}
+</p>
+
+<p style="margin:5px 0;">
+<b>Jam Kerja:</b> {b.get('jam_ready','-')} 
+| 
+<b>Lokasi:</b> {b.get('alamat_mu','-')}
+</p>
+
+<p style="margin:5px 0;">
+<b>Status:</b> {b.get('status','PENDING')}
+</p>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
