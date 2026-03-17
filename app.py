@@ -128,66 +128,62 @@ if menu == "BERANDA":
         total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
         dp_val = float(f.get('dp', 0))
+        sisa_val = total_semua - dp_val
         
-        logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:75px; position: absolute; left: 10px; top: 10px;">' if p.get('logo_base64') else ""
-        stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
-        sisa_teks = f"<span style='color:green;'>LUNAS</span>" if f.get('status') == "SELESAI (LUNAS)" else f"Rp {total_semua - dp_val:,.0f}"
+        logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px;">' if p.get('logo_base64') else ""
+        stempel_html = '<div style="position:absolute; top:20px; right:20px; border:3px solid #e91e63; color:#e91e63; padding:5px 10px; font-weight:bold; transform:rotate(-15deg); border-radius:5px; opacity:0.8; font-size:20px; z-index:99;">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
+        sisa_teks = '<span style="color:#4caf50; font-weight:bold;">LUNAS</span>' if f.get('status') == "SELESAI (LUNAS)" else f'Rp {sisa_val:,.0f}'
 
-        # 2. RAKIT DESAIN (Satu-satunya yang akan tampil di layar)
-        nota_html = f"""
-        <div class="faktur-box">
-            {stempel}
-            <div style="position: relative; height: 100px; width: 100%;">
-                {logo_html}
-                <center>
-                    <h2 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h2>
-                    <p style="margin:0; font-size:12px;">{p.get('alamat','')}<br>WA: {p.get('hp','')} | IG: {p.get('ig','')}</p>
-                </center>
-            </div>
-            <hr style="border: 1px solid #eee;">
-            <p><b>INVOICE #{f.get('inv_no','')}</b></p>
-            <table style="width:100%; font-size: 14px; border-collapse: collapse;">
-                <tr><td style="width:35%; padding: 4px 0;">Nama Klien</td><td>: {f.get('nama','')}</td></tr>
-                <tr><td style="padding: 4px 0;">WhatsApp</td><td>: {f.get('wa','-')}</td></tr>
-                <tr><td style="padding: 4px 0;">Tanggal</td><td>: {f.get('tgl','')}</td></tr>
-                <tr><td style="padding: 4px 0;">Lokasi</td><td>: {f.get('alamat_mu','')}</td></tr>
-                <tr><td style="padding: 4px 0;">Jam Kerja</td><td>: {f.get('jam_ready','')}</td></tr>
-            </table>
-            <br><p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
-            <div style="font-size: 13px;">"""
-        
+        # 2. RAKIT DESAIN (Fokus pada kerapian di Layar Kecil)
+        # Gunakan r''' agar Python tidak bingung dengan karakter backslash
+        isi_rincian = ""
         for item in f.get('paket_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between; padding: 2px 0;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
+            isi_rincian += f"<div style='display:flex; justify-content:space-between; margin:4px 0;'><span>• {item.get('nama','')} (x{item.get('qty',1)})</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
         for item_m in f.get('manual_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between; padding: 2px 0;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
-        
-        nota_html += f"""</div>
-            <hr style="border: 1px dashed #eee; margin: 15px 0;">
-            <table style="width:100%; font-weight: bold; font-size: 15px;">
-                <tr><td>TOTAL TAGIHAN</td><td style="text-align:right;">Rp {total_semua:,.0f}</td></tr>
-                <tr><td>DP DITERIMA</td><td style="text-align:right;">Rp {dp_val:,.0f}</td></tr>
-                <tr><td>SISA PELUNASAN</td><td style="text-align:right;">{sisa_teks}</td></tr>
-            </table>
-            <br><div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px;">
-            <b>REKENING PEMBAYARAN:</b><br>{p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}</div>
-            <p style="font-size:11px; color: #555; margin-top:15px;"><b>SYARAT & KETENTUAN:</b><br>{s.get('tnc','').replace('\\n','<br>').replace('\n','<br>')}</p>
-            <center><p style="margin-top:20px; font-weight: bold;">{s.get('salam','')}</p></center>
-            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s.get('signature','')}</b></p></div>
-        </div>"""
-        
-        # 3. TAMPILKAN KE LAYAR
-        st.divider()
+            isi_rincian += f"<div style='display:flex; justify-content:space-between; margin:4px 0;'><span>• {item_m.get('nama','')} (x{item_m.get('qty',1)})</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
+
+        nota_html = f"""
+        <div style="background-color:white; color:#333; padding:20px; border-radius:15px; border:1px solid #eee; font-family:sans-serif; max-width:100%; position:relative; box-shadow: 0px 4px 10px rgba(0,0,0,0.05);">
+            {stempel_html}
+            <div style="text-align:center; margin-bottom:15px;">
+                {logo_html}
+                <h2 style="margin:5px 0 0; color:#F19CBB; font-size:22px;">{p.get('nama','Elisabeth MUA')}</h2>
+                <p style="margin:0; font-size:12px; color:#777;">{p.get('alamat','')}<br>WA: {p.get('hp','')} | IG: {p.get('ig','')}</p>
+            </div>
+            <div style="font-size:13px; border-top:1px solid #eee; border-bottom:1px solid #eee; padding:10px 0; margin-bottom:15px;">
+                <b>INVOICE #{f.get('inv_no','')}</b><br>
+                Klien: {f.get('nama','')}<br>
+                Tanggal: {f.get('tgl','')}<br>
+                Lokasi: {f.get('alamat_mu','')}
+            </div>
+            <div style="font-size:13px;">
+                <p style="font-weight:bold; border-bottom:1px solid #f9f9f9; padding-bottom:5px;">RINCIAN LAYANAN:</p>
+                {isi_rincian}
+            </div>
+            <div style="margin-top:15px; border-top:2px solid #F19CBB; padding-top:10px;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>Rp {total_semua:,.0f}</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; color:#777;"><span>DP</span><span>Rp {dp_val:,.0f}</span></div>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:16px; margin-top:5px; color:#F19CBB;"><span>SISA</span><span>{sisa_teks}</span></div>
+            </div>
+            <div style="margin-top:20px; background:#fff9fb; padding:10px; border-radius:8px; font-size:11px;">
+                <b>PEMBAYARAN:</b><br>{p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}
+            </div>
+            <div style="text-align:center; margin-top:20px; font-style:italic; font-size:12px;">{s.get('salam','Terima Kasih')}</div>
+        </div>
+        """
+
+        # 3. OUTPUT KE LAYAR (Hanya ini yang muncul)
+        st.write("---")
         st.markdown(nota_html, unsafe_allow_html=True)
         
-        st.download_button(
-            label="💾 DOWNLOAD NOTA", 
-            data=f"<html><head><meta charset='UTF-8'></head><body style='padding:20px;'>{nota_html}</body></html>", 
-            file_name=f"Invoice_{f.get('nama','klien')}.html", 
-            mime="text/html"
-        )
-        if st.button("Tutup Preview"): 
-            del st.session_state.current_faktur
-            st.rerun()     
+        # Tombol Download & Tutup
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button("💾 SIMPAN NOTA", data=nota_html, file_name=f"Invoice_{f.get('nama','klien')}.html", mime="text/html")
+        with col2:
+            if st.button("❌ TUTUP PREVIEW"):
+                del st.session_state.current_faktur
+                st.rerun()
             # --- 2. INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah / Edit Jadwal")
