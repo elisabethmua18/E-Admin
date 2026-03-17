@@ -166,8 +166,8 @@ if menu == "BERANDA":
                     </div>
                         <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
                 
-                        <div style="display:flex; align-items:center; gap:10px;">
-    <img src="{p.get('logo','')}" style="height:50px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+    
     <div>
         <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
         <p style="margin:0; font-size:11px; color:#888;">
@@ -175,6 +175,9 @@ if menu == "BERANDA":
             WA: {p.get('hp','')}
         </p>
     </div>
+
+    <img src="{p.get('logo','')}" style="height:60px;">
+
 </div>
                 
                         <hr>
