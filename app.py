@@ -120,7 +120,6 @@ if menu == "BERANDA":
 
 
                                 if 'current_faktur' in st.session_state:
-                                   if 'current_faktur' in st.session_state:
                                     f = st.session_state.current_faktur
                                     p = st.session_state.db['profile']
                     
