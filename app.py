@@ -117,13 +117,13 @@ if menu == "BERANDA":
                 if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
                     st.session_state.current_faktur = b
 
-    # --- TAMPILAN FAKTUR ---
+   # --- TAMPILAN FAKTUR ---
     if 'current_faktur' in st.session_state:
         f = st.session_state.current_faktur
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
-        # 1. HITUNG TOTAL & LOGIKA STATUS
+        # 1. LOGIKA PERHITUNGAN
         total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
         total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
         total_semua = total_p + total_m
@@ -133,7 +133,7 @@ if menu == "BERANDA":
         stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
         sisa_teks = f"<span style='color:green;'>LUNAS</span>" if f.get('status') == "SELESAI (LUNAS)" else f"Rp {total_semua - dp_val:,.0f}"
 
-        # 2. RAKIT NOTA (Satu variabel untuk Tampilan & Download)
+        # 2. RAKIT NOTA_HTML (Satu variabel untuk Layar & Download)
         nota_html = f"""
         <div class="faktur-box">
             {stempel}
@@ -175,7 +175,7 @@ if menu == "BERANDA":
             <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s.get('signature','')}</b></p></div>
         </div>"""
         
-        # 3. OUTPUT KE LAYAR & DOWNLOAD
+        # 3. OUTPUT (Hanya muncul satu kali)
         st.divider()
         st.markdown(nota_html, unsafe_allow_html=True)
         st.download_button(
