@@ -123,6 +123,24 @@ if menu == "BERANDA":
         p = st.session_state.db['profile']
         s = st.session_state.db['faktur_settings']
         
+        # ... (kode perhitungan total_p, total_m, total_semua tetap biarkan) ...
+        # Pastikan variabel total_semua dan sisa_teks sudah terhitung di atas baris ini
+
+        st.divider()
+        # PERBAIKAN UTAMA: Gunakan st.markdown dengan unsafe_allow_html agar nota rapi
+        st.markdown(nota_html, unsafe_allow_html=True)
+        
+        # Tombol download di bawah nota
+        st.download_button(
+            label="💾 DOWNLOAD NOTA", 
+            data=f"<html><head><meta charset='UTF-8'></head><body>{nota_html}</body></html>", 
+            file_name=f"Invoice_{f.get('nama','klien')}.html", 
+            mime="text/html"
+        )
+        if st.button("Tutup Preview"): 
+            del st.session_state.current_faktur
+            st.rerun()
+        
         # LOGO POSITIONING
         logo_html = ""
         if p.get('logo_base64'):
