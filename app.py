@@ -109,7 +109,7 @@ if menu == "BERANDA":
                 
                 if c1.button("EDIT", key=f"ed_{i}"):
                     st.session_state.edit_data = b
-                    st.warning("Silakan klik menu 'INPUT JADWAL'")
+                    st.warning("Data siap diedit. Silakan klik menu 'INPUT JADWAL'")
                 
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
@@ -256,4 +256,35 @@ elif menu == "LAYANAN":
         hl = st.number_input("Harga Master", min_value=0)
         if st.form_submit_button("Tambah ke Master"):
             st.session_state.db['master_layanan'][nl] = hl; save_data(); st.rerun()
-    st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga
+    st.table(pd.DataFrame(list(st.session_state.db['master_layanan'].items()), columns=['Paket', 'Harga']))
+
+# --- 4. PROFIL & SETTING ---
+elif menu == "PROFIL & SETTING":
+    st.header("👤 Profil & Setting Faktur")
+    t_prof, t_set = st.tabs(["PROFIL", "SETTING"])
+    with t_prof:
+        st.session_state.db['profile']['nama'] = st.text_input("Nama MUA", st.session_state.db['profile'].get('nama', ''))
+        st.session_state.db['profile']['alamat'] = st.text_area("Alamat MUA", st.session_state.db['profile'].get('alamat', ''))
+        st.session_state.db['profile']['hp'] = st.text_input("No WA MUA", st.session_state.db['profile'].get('hp', ''))
+        st.session_state.db['profile']['ig'] = st.text_input("Akun IG MUA", st.session_state.db['profile'].get('ig', ''))
+        logo_file = st.file_uploader("Upload Logo MUA (.png)", type=["png"])
+        if logo_file:
+            st.session_state.db['profile']['logo_base64'] = base64.b64encode(logo_file.read()).decode()
+            st.success("Logo terupload!")
+        st.divider()
+        st.session_state.db['profile']['bank'] = st.text_input("Nama Bank", st.session_state.db['profile'].get('bank', ''))
+        st.session_state.db['profile']['no_rek'] = st.text_input("No Rekening", st.session_state.db['profile'].get('no_rek', ''))
+        st.session_state.db['profile']['an'] = st.text_input("Nama Pemilik Rekening", st.session_state.db['profile'].get('an', ''))
+        if st.button("💾 SIMPAN PROFIL"): save_data(); st.success("Profil Disimpan!")
+    with t_set:
+        st.session_state.db['faktur_settings']['tnc'] = st.text_area("TnC", st.session_state.db['faktur_settings'].get('tnc', ''))
+        st.session_state.db['faktur_settings']['salam'] = st.text_area("Salam", st.session_state.db['faktur_settings'].get('salam', ''))
+        st.session_state.db['faktur_settings']['signature'] = st.text_input("Signature", st.session_state.db['faktur_settings'].get('signature', ''))
+        if st.button("💾 SIMPAN SETTING"): save_data(); st.success("Setting Disimpan!")
+
+# --- 5. KEUANGAN ---
+elif menu == "KEUANGAN":
+    st.header("💰 Laporan Keuangan")
+    lunas_jobs = [b for b in st.session_state.db['bookings'] if b.get('status') == "SELESAI (LUNAS)"]
+    total_pendapatan = sum([sum([p['price']*p['qty'] for p in j['paket_list']]) + sum([m['harga']*m['qty'] for m in j['manual_list']]) for j in lunas_jobs])
+    st.metric("TOTAL PENGHASILAN BERSIH", f"Rp {total_pendapatan:,}")
