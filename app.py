@@ -180,7 +180,7 @@ if menu == "BERANDA":
                 
                         <b>Total:</b> Rp {total_semua:,.0f}<br>
                         <b>DP:</b> Rp {dp_val:,.0f}<br>
-                        <b>Sisa:</b> {"LUNAS" if is_lunas else f"Rp {sisa_val:,.0f}"}
+                        <b>Sisa:</b> Rp {sisa_val:,.0f} { '(LUNAS)' if is_lunas else '' }
                 
                         <hr>
                 
