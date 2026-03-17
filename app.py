@@ -158,7 +158,7 @@ if menu == "BERANDA":
                         color:{warna_tema};
                         border:5px solid {warna_tema};
                         padding:20px 40px;
-                        opacity:0.28;
+                        opacity:0.40;
                         border-radius:10px;
                         pointer-events:none;
                     ">
