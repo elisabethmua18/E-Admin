@@ -408,7 +408,7 @@ if logo_file is not None:
 
     st.success("Logo berhasil disimpan")
             
-        st.divider()
+    st.divider()
         st.subheader("Informasi Rekening")
         st.session_state.db['profile']['bank'] = st.text_input("Nama Bank", st.session_state.db['profile'].get('bank', ''))
         st.session_state.db['profile']['no_rek'] = st.text_input("Nomor Rekening", st.session_state.db['profile'].get('no_rek', ''))
