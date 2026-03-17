@@ -120,15 +120,15 @@ if menu == "BERANDA":
 
 
                 if 'current_faktur' in st.session_state:
-                                                f = st.session_state.current_faktur
-                                                p = st.session_state.db['profile']
-                                                s = st.session_state.db['faktur_settings']
+                    f = st.session_state.current_faktur
+                    p = st.session_state.db['profile']
+                    s = st.session_state.db['faktur_settings']
                                 
-                                total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
-                                total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
-                                total_semua = total_p + total_m
-                                dp_val = float(f.get('dp', 0))
-                                sisa_val = max(total_semua - dp_val, 0)
+                    total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
+                    total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
+                    total_semua = total_p + total_m
+                    dp_val = float(f.get('dp', 0))
+                    sisa_val = max(total_semua - dp_val, 0)
                     
                     is_lunas = f.get('status') == "SELESAI (LUNAS)"
                     warna_tema = "#4caf50" if is_lunas else "#F19CBB"
