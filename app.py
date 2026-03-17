@@ -126,7 +126,7 @@ if menu == "BERANDA":
         
         logo_html = ""
         if p.get('logo_base64'):
-            logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:80px; position: absolute; left: 10px; top: 10px;">'
+            logo_html = f'<img src="data:image/png;base64,{p["logo_base64"]}" style="width:70px; position: absolute; left: 10px; top: -10px;">'
         
         stempel = '<div class="stempel-lunas">LUNAS</div>' if f.get('status') == "SELESAI (LUNAS)" else ""
         total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
@@ -142,28 +142,25 @@ if menu == "BERANDA":
         nota_html = f"""
         <div class="faktur-box">
             {stempel}
-            <div style="position: relative; min-height: 100px; padding-left: 90px;">
+            <div style="position: relative; height: 80px;">
                 {logo_html}
-                <div style="text-align: center;">
-                    <h2 style="margin:0; color:#F19CBB;">{p.get('nama','')}</h2>
-                    <p style="margin:0; font-size:12px;">{p.get('alamat','')}<br>WA: {p.get('hp','')} | IG: {p.get('ig','')}</p>
-                </div>
+                <center><h2 style="margin:0; color:#F19CBB;">{p['nama']}</h2>
+                <p style="margin:0; font-size:12px;">{p['alamat']}<br>WA: {p['hp']} | IG: {p['ig']}</p></center>
             </div>
-            <hr style="border: 1px solid #eee;">
-            <p><b>INVOICE #{f.get('inv_no','')}</b></p>
+            <hr style="border: 1px solid #eee;"><p><b>INVOICE #{f['inv_no']}</b></p>
             <table style="width:100%; font-size: 14px;">
-                <tr><td style="width:35%;">Nama Klien</td><td>: {f.get('nama','')}</td></tr>
+                <tr><td style="width:35%;">Nama Klien</td><td>: {f['nama']}</td></tr>
                 <tr><td>WhatsApp</td><td>: {f.get('wa','-')}</td></tr>
-                <tr><td>Tanggal</td><td>: {f.get('tgl','')}</td></tr>
-                <tr><td>Lokasi</td><td>: {f.get('alamat_mu','')}</td></tr>
-                <tr><td>Jam Kerja</td><td>: {f.get('jam_ready','')}</td></tr>
+                <tr><td>Tanggal</td><td>: {f['tgl']}</td></tr>
+                <tr><td>Lokasi</td><td>: {f['alamat_mu']}</td></tr>
+                <tr><td>Jam Kerja</td><td>: {f['jam_ready']}</td></tr>
             </table>
             <br><p style="border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>RINCIAN LAYANAN:</b></p>
             <div style="font-size: 13px;">"""
         for item in f.get('paket_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item.get('nama','')}</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,}</span></div>"
+            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item['nama']} (x{item['qty']})</span><span>Rp {float(item['price'])*int(item['qty']):,}</span></div>"
         for item_m in f.get('manual_list', []):
-            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m.get('nama','')}</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,}</span></div>"
+            nota_html += f"<div style='display:flex; justify-content:space-between;'><span>• {item_m['nama']} (x{item_m['qty']})</span><span>Rp {float(item_m['harga'])*int(item_m['qty']):,}</span></div>"
         nota_html += f"""</div>
             <hr style="border: 1px dashed #eee; margin: 15px 0;">
             <table style="width:100%; font-weight: bold; font-size: 15px;">
@@ -172,16 +169,15 @@ if menu == "BERANDA":
                 <tr><td>SISA PELUNASAN</td><td style="text-align:right;">{sisa_teks}</td></tr>
             </table>
             <br><div style="background-color: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px;">
-            <b>REKENING:</b> {p.get('bank','')} {p.get('no_rek','')} a/n {p.get('an','')}</div>
-            <p style="font-size:11px; color: #555;"><b>S&K:</b><br>{s.get('tnc','').replace('\\n','<br>')}</p>
-            <center><p style="margin-top:20px; font-weight: bold;">{s.get('salam','')}</p></center>
-            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s.get('signature','')}</b></p></div>
+            <b>REKENING:</b> {p['bank']} {p['no_rek']} a/n {p['an']}</div>
+            <p style="font-size:11px; color: #555;"><b>SYARAT & KETENTUAN:</b><br>{s['tnc'].replace('\\n','<br>').replace('\n','<br>')}</p>
+            <center><p style="margin-top:20px; font-weight: bold;">{s['salam']}</p></center>
+            <div style="text-align:right; margin-top:10px;"><p>Ttd,<br><br><b>{s['signature']}</b></p></div>
         </div>"""
         st.markdown(nota_html, unsafe_allow_html=True)
-        st.download_button(label="💾 DOWNLOAD NOTA", data=f"<html><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f.get('nama','klien')}.html", mime="text/html")
+        st.download_button(label="💾 DOWNLOAD NOTA", data=f"<html><body style='padding:20px;'>{nota_html}</body></html>", file_name=f"Invoice_{f['nama']}.html", mime="text/html")
         if st.button("Tutup Preview"): del st.session_state.current_faktur; st.rerun()
-
-# --- 2. INPUT JADWAL ---
+            # --- 2. INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah Jadwal Baru")
     edit_data = st.session_state.get('edit_data', {})
@@ -282,39 +278,31 @@ elif menu == "KEUANGAN":
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
     sel_year = c2.selectbox("Pilih Tahun", ["2025","2026","2027"], index=1)
-    
     omset = 0
     for j in st.session_state.db['bookings']:
-        if j.get('status') == "SELESAI (LUNAS)":
-            tgl_p = j.get('tgl','').split('/')
-            if len(tgl_p) == 3 and tgl_p[1] == sel_month and tgl_p[2] == sel_year:
+        tgl_p = j.get('tgl','').split('/')
+        if len(tgl_p) == 3 and tgl_p[1] == sel_month and tgl_p[2] == sel_year:
+            if j.get('status') == "SELESAI (LUNAS)":
                 p_sum = sum([float(p.get('price',0))*int(p.get('qty',1)) for p in j.get('paket_list',[])])
                 m_sum = sum([float(m.get('harga',0))*int(m.get('qty',1)) for m in j.get('manual_list',[])])
                 omset += (p_sum + m_sum)
-    
+            else:
+                omset += float(j.get('dp', 0))
     st.write("---")
-    st.subheader("支出 Pengeluaran Manual")
+    st.subheader("💸 Pengeluaran Manual")
     with st.form("pengeluaran_form"):
         ket_out = st.text_input("Keterangan Pengeluaran")
         nom_out = st.number_input("Nominal (Rp)", min_value=0)
-        if st.form_submit_button("Tambah Pengeluaran"):
+        if st.form_submit_button("Simpan Pengeluaran"):
             st.session_state.db['pengeluaran'].append({"tgl": date.today().strftime("%d/%m/%Y"), "ket": ket_out, "nom": nom_out})
             save_data(); st.rerun()
-    
-    total_out = 0
-    filtered_out = []
-    for p in st.session_state.db.get('pengeluaran', []):
-        tgl_o = p.get('tgl','').split('/')
-        if len(tgl_o) == 3 and tgl_o[1] == sel_month and tgl_o[2] == sel_year:
-            total_out += float(p.get('nom', 0))
-            filtered_out.append(p)
-            
+    total_out = sum([float(p.get('nom', 0)) for p in st.session_state.db.get('pengeluaran', []) if len(p.get('tgl','').split('/')) == 3 and p.get('tgl','').split('/')[1] == sel_month and p.get('tgl','').split('/')[2] == sel_year])
     st.divider()
     col1, col2, col3 = st.columns(3)
     col1.metric("OMSET (Bruto)", f"Rp {omset:,}")
     col2.metric("PENGELUARAN", f"Rp {total_out:,}")
     col3.metric("NETT (Bersih)", f"Rp {omset - total_out:,}")
-    
+    filtered_out = [p for p in st.session_state.db.get('pengeluaran', []) if len(p.get('tgl','').split('/')) == 3 and p.get('tgl','').split('/')[1] == sel_month and p.get('tgl','').split('/')[2] == sel_year]
     if filtered_out:
         st.write("**Detail Pengeluaran:**")
         st.table(pd.DataFrame(filtered_out))
