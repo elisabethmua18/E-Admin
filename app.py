@@ -101,19 +101,14 @@ if menu == "BERANDA":
                 st.markdown(f"""
                 <div class="job-card">
                     <h3 style="margin:0; color:#F19CBB;">
-{b.get('nama','-')} - {b.get('inv_no','-')}
-</h3>
+<h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
 
 <p style="margin:5px 0;">
-<b>Tim:</b> {b.get('jenis_tim','-')} 
-| 
-<b>Anggota:</b> {b.get('anggota_tim','-')}
+<b>Tim:</b> {b.get('jenis_tim','-')} | <b>Anggota:</b> {b.get('anggota_tim','-')}
 </p>
 
 <p style="margin:5px 0;">
-<b>Jam Kerja:</b> {b.get('jam_ready','-')} 
-| 
-<b>Lokasi:</b> {b.get('alamat_mu','-')}
+<b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
 </p>
 
 <p style="margin:5px 0;">
