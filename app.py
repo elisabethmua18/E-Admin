@@ -395,13 +395,18 @@ elif menu == "PROFIL & SETTING":
         
         st.divider()
         st.subheader("Logo Bisnis")
-        logo_file = st.file_uploader("Upload Logo Baru (.png)", type=["png"])
-        if logo_file:
-            # Konversi gambar ke Base64 agar tersimpan di JSON
-            img_base64 = base64.b64encode(logo_file.read()).decode()
-            st.session_state.db['profile']['logo_base64'] = img_base64
-            st.success("Logo berhasil diunggah!")
-            st.image(logo_file, width=100)
+        import base64
+
+logo_file = st.file_uploader("Upload Logo", type=["png","jpg","jpeg"])
+
+if logo_file is not None:
+    logo_base64 = base64.b64encode(logo_file.read()).decode()
+
+    st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
+
+    save_db(st.session_state.db)
+
+    st.success("Logo berhasil disimpan")
             
         st.divider()
         st.subheader("Informasi Rekening")
