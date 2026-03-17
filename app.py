@@ -284,4 +284,4 @@ elif menu == "PROFIL & SETTING":
     st.header("👤 Profil & Setting Faktur")
     t_prof, t_set = st.tabs(["PROFIL", "SETTING"])
     with t_prof:
-        st.session_state.db['profile']['nama'] = st.text_input("Nama MUA",
+        st.session_state.db['profile']['nama'] = st.text_input("Nama MUA"),
