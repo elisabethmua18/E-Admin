@@ -2,17 +2,16 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import os
+import requests
+import base64
 import pandas as pd
 import base64
 def save_data():
 
     json_content = json.dumps(st.session_state.db, indent=4)
+    encoded_content = base64.b64encode(json_content.encode()).decode()
 
-    # encode ke base64
-    encoded = base64.b64encode(json_content.encode()).decode()
-
-    url = "https://api.github.com/repos/USERNAME/REPO/contents/mua_master_pro.json"
-
+    url = url = "https://api.github.com/repos/elisabethmua18/E-Admin/contents/mua_master_pro.json"
     headers = {
         "Authorization": f"token {st.secrets['GITHUB_TOKEN']}",
         "Accept": "application/vnd.github+json"
@@ -20,13 +19,19 @@ def save_data():
 
     # ambil SHA file lama
     r = requests.get(url, headers=headers)
-    sha = r.json()["sha"]
+
+    if r.status_code == 200:
+        sha = r.json()["sha"]
+    else:
+        sha = None
 
     data = {
-        "message": "Auto update database",
-        "content": encoded,
-        "sha": sha
+        "message": "Auto update database dari aplikasi",
+        "content": encoded_content
     }
+
+    if sha:
+        data["sha"] = sha
 
     requests.put(url, headers=headers, json=data)
 from datetime import datetime, time, date
