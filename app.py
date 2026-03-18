@@ -170,6 +170,8 @@ if menu == "BERANDA":
                     tnc_html = s.get('tnc','').replace('\n','<br>')
                 
                     html_final = f"""
+                   # --- MULAI COPY DARI SINI ---
+                    html_final = f"""
                     <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
                        <div style="
                         position:absolute;
@@ -190,38 +192,48 @@ if menu == "BERANDA":
                         <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
                 
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-    
-    <div>
-        <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
-        <p style="margin:0; font-size:11px; color:#888;">
-            {p.get('alamat','')}<br>
-            WA: {p.get('hp','')}
-        </p>
-    </div>
-
-    <img src="{p.get('logo','')}" style="height:60px;">
-
-</div>
+                            <div>
+                                <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
+                                <p style="margin:0; font-size:11px; color:#888;">
+                                    {p.get('alamat','')}<br>
+                                    WA: {p.get('hp','')}
+                                </p>
+                            </div>
+                            <img src="{p.get('logo','')}" style="height:60px;">
+                        </div>
                 
                         <hr>
-                
                         <b>Invoice:</b> {f.get('inv_no')}<br>
                         <b>Tanggal:</b> {f.get('tgl')}<br>
                         <b>Klien:</b> {f.get('nama')}<br>
                         <b>WA:</b> {f.get('wa')}<br>
                         <b>Lokasi:</b> {f.get('alamat_mu')}<br>
                         <b>Jam:</b> {f.get('jam_ready')}<br>
-                
                         <hr>
                 
                         <b>RINCIAN</b>
                         {isi_layanan}
-                
                         <hr>
                 
                         <b>Total:</b> Rp {total_semua:,.0f}<br>
                         <b>DP:</b> Rp {dp_val:,.0f}<br>
                         <b>Sisa:</b> Rp {sisa_val:,.0f} { '(LUNAS)' if is_lunas else '' }
+                        <hr>
+                
+                        <b>Transfer:</b><br>
+                        {p.get('bank')} {p.get('no_rek')}<br>
+                        a/n {p.get('an')}
+                        <br><br>
+                        <b>Syarat & Ketentuan</b><br>
+                        {tnc_html}
+                        <br><br>
+                        <center><i>{s.get('salam')}</i></center>
+                        <div style="text-align:right;margin-top:40px;">
+                        {s.get('signature')}
+                        </div>
+                    </div>
+                    """ 
+                    # --- AKHIRI DENGAN TANDA KUTIP TIGA DI ATAS ---
                 
                         <hr>
                 
