@@ -254,7 +254,7 @@ if menu == "BERANDA":
                         {s.get('signature')}
                         </div>
                     </div>
-                    """
+                    """ # <--- Pastikan ini ada dan lurus dengan html_final di atasnya
                 
                     st.divider()
                     components.html(html_final, height=900, scrolling=True)
