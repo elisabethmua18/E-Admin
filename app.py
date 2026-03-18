@@ -92,6 +92,7 @@ if menu == "BERANDA":
     selected_str = selected_date.strftime("%d/%m/%Y")
     list_job = [b for b in st.session_state.db['bookings'] if b.get('tgl') == selected_str]
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
+    
     if not list_job:
         st.info("Tidak ada jadwal untuk tanggal ini.")
     else:
@@ -99,21 +100,12 @@ if menu == "BERANDA":
             with st.container():
                 st.markdown(f"""
                 <div class="job-card">
-                    <h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
-                    
-                    <p style="margin:5px 0;">
-                        <b>Tim:</b> {b.get('tim_type','-')} | <b>Anggota:</b> {b.get('tim_nama','-')}
-                    </p>
+                    <h3 style="margin:0; color:#F19CBB;">
+<h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
 
-                    <p style="margin:5px 0;">
-                        <b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
-                    </p>
-
-                    <p style="margin:5px 0;">
-                        <b>Status:</b> {b.get('status','PENDING')}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+<p style="margin:5px 0;">
+<b>Tim:</b> {b.get('jenis_tim','-')} | <b>Anggota:</b> {b.get('anggota_tim','-')}
+</p>
 
 <p style="margin:5px 0;">
 <b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
@@ -170,8 +162,6 @@ if menu == "BERANDA":
                     tnc_html = s.get('tnc','').replace('\n','<br>')
                 
                     html_final = f"""
-                   # --- MULAI COPY DARI SINI ---
-                    html_final = f"""
                     <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
                        <div style="
                         position:absolute;
@@ -192,65 +182,57 @@ if menu == "BERANDA":
                         <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
                 
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
-                                <p style="margin:0; font-size:11px; color:#888;">
-                                    {p.get('alamat','')}<br>
-                                    WA: {p.get('hp','')}
-                                </p>
-                            </div>
-                            <img src="{p.get('logo','')}" style="height:60px;">
-                        </div>
+    
+    <div>
+        <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
+        <p style="margin:0; font-size:11px; color:#888;">
+            {p.get('alamat','')}<br>
+            WA: {p.get('hp','')}
+        </p>
+    </div>
+
+    <img src="{p.get('logo','')}" style="height:60px;">
+
+</div>
                 
                         <hr>
+                
                         <b>Invoice:</b> {f.get('inv_no')}<br>
                         <b>Tanggal:</b> {f.get('tgl')}<br>
                         <b>Klien:</b> {f.get('nama')}<br>
                         <b>WA:</b> {f.get('wa')}<br>
                         <b>Lokasi:</b> {f.get('alamat_mu')}<br>
                         <b>Jam:</b> {f.get('jam_ready')}<br>
+                
                         <hr>
                 
                         <b>RINCIAN</b>
                         {isi_layanan}
+                
                         <hr>
                 
                         <b>Total:</b> Rp {total_semua:,.0f}<br>
                         <b>DP:</b> Rp {dp_val:,.0f}<br>
                         <b>Sisa:</b> Rp {sisa_val:,.0f} { '(LUNAS)' if is_lunas else '' }
+                
                         <hr>
                 
                         <b>Transfer:</b><br>
                         {p.get('bank')} {p.get('no_rek')}<br>
                         a/n {p.get('an')}
+                
                         <br><br>
+                
                         <b>Syarat & Ketentuan</b><br>
                         {tnc_html}
+                
                         <br><br>
+                
                         <center><i>{s.get('salam')}</i></center>
+                
                         <div style="text-align:right;margin-top:40px;">
                         {s.get('signature')}
                         </div>
-                    </div>
-                    """ 
-                    # --- AKHIRI DENGAN TANDA KUTIP TIGA DI ATAS ---
-                
-                        <hr>
-                
-                        <b>Transfer:</b><br>
-                        {p.get('bank')} {p.get('no_rek')}<br>
-                        a/n {p.get('an')}
-                
-                        <br><br>
-                
-                        <b>Syarat & Ketentuan</b><br>
-                        {tnc_html}
-                
-                        <br><br>
-                
-                        <center><i>{s.get('salam')}</i></center>
-                
-                        <div style="text-align:right;margin-top:40px;">{s.get('signature')}</div>
                     </div>
                     """
                 
@@ -258,9 +240,13 @@ if menu == "BERANDA":
                     components.html(html_final, height=900, scrolling=True)
                 
                     col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
+                    with col_b:
                         if st.button("❌ TUTUP"):
                             del st.session_state.current_faktur
                             st.rerun()
+            
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah / Edit Jadwal")
