@@ -4,9 +4,31 @@ import json
 import os
 import pandas as pd
 import base64
-def save_db(db):
-    with open("db.json", "w") as f:
-        json.dump(db, f, indent=2)
+def save_data():
+
+    json_content = json.dumps(st.session_state.db, indent=4)
+
+    # encode ke base64
+    encoded = base64.b64encode(json_content.encode()).decode()
+
+    url = "https://api.github.com/repos/USERNAME/REPO/contents/mua_master_pro.json"
+
+    headers = {
+        "Authorization": f"token {st.secrets['GITHUB_TOKEN']}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    # ambil SHA file lama
+    r = requests.get(url, headers=headers)
+    sha = r.json()["sha"]
+
+    data = {
+        "message": "Auto update database",
+        "content": encoded,
+        "sha": sha
+    }
+
+    requests.put(url, headers=headers, json=data)
 from datetime import datetime, time, date
 
 # --- CONFIG HALAMAN ---
