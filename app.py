@@ -260,9 +260,6 @@ if menu == "BERANDA":
                     components.html(html_final, height=900, scrolling=True)
                 
                     col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
-                    with col_b:
                         if st.button("❌ TUTUP"):
                             del st.session_state.current_faktur
                             st.rerun()
