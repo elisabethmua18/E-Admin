@@ -92,20 +92,28 @@ if menu == "BERANDA":
     selected_str = selected_date.strftime("%d/%m/%Y")
     list_job = [b for b in st.session_state.db['bookings'] if b.get('tgl') == selected_str]
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
-    
-    if not list_job:
+   if not list_job:
         st.info("Tidak ada jadwal untuk tanggal ini.")
     else:
         for i, b in enumerate(list_job):
             with st.container():
                 st.markdown(f"""
                 <div class="job-card">
-                    <h3 style="margin:0; color:#F19CBB;">
-<h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
+                    <h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
+                    
+                    <p style="margin:5px 0;">
+                        <b>Tim:</b> {b.get('tim_type','-')} | <b>Anggota:</b> {b.get('tim_nama','-')}
+                    </p>
 
-<p style="margin:5px 0;">
-<b>Tim:</b> {b.get('tim_type','-')} | <b>Anggota:</b> {b.get('tim_nama','-')}
-</p>
+                    <p style="margin:5px 0;">
+                        <b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
+                    </p>
+
+                    <p style="margin:5px 0;">
+                        <b>Status:</b> {b.get('status','PENDING')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
 
 <p style="margin:5px 0;">
 <b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
