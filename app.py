@@ -92,7 +92,7 @@ if menu == "BERANDA":
     selected_str = selected_date.strftime("%d/%m/%Y")
     list_job = [b for b in st.session_state.db['bookings'] if b.get('tgl') == selected_str]
     list_job = sorted(list_job, key=lambda x: x.get('jam_ready', '00:00').split('-')[0])
-   if not list_job:
+    if not list_job:
         st.info("Tidak ada jadwal untuk tanggal ini.")
     else:
         for i, b in enumerate(list_job):
