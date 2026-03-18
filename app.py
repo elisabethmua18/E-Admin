@@ -449,7 +449,7 @@ elif menu == "PROFIL & SETTING":
 
             st.session_state.db['profile']['logo'] = f"data:image/png;base64,{logo_base64}"
 
-            save_data(st.session_state.db)
+            save_data()
 
             st.success("Logo berhasil disimpan")
             
