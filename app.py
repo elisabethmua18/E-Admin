@@ -101,10 +101,13 @@ if menu == "BERANDA":
                 st.markdown(f"""
                 <div class="job-card">
                     <h3 style="margin:0; color:#F19CBB;">
-<h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
+<h3 style="margin:0; color:#F19CBB;">
+{b.get('nama','-')} - {b.get('inv_no','-')}
+</h3>
 
 <p style="margin:5px 0;">
-<b>Tim:</b> {b.get('jenis_tim','-')} | <b>Anggota:</b> {b.get('anggota_tim','-')}
+<b>Tim:</b> {b.get('tim_type','-') if b.get('hire_tim') else '-'}
+| <b>Anggota:</b> {b.get('tim_nama','-') if b.get('hire_tim') else '-'}
 </p>
 
 <p style="margin:5px 0;">
