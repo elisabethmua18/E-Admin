@@ -266,7 +266,6 @@ if menu == "BERANDA":
                         if st.button("❌ TUTUP"):
                             del st.session_state.current_faktur
                             st.rerun()
-            
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
     st.header("📝 Tambah / Edit Jadwal")
