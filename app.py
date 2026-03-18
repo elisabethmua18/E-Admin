@@ -250,9 +250,7 @@ if menu == "BERANDA":
                 
                         <center><i>{s.get('salam')}</i></center>
                 
-                        <div style="text-align:right;margin-top:40px;">
-                        {s.get('signature')}
-                        </div>
+                        <div style="text-align:right;margin-top:40px;">{s.get('signature')}</div>
                     </div>
                     """
                 
