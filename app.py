@@ -50,7 +50,7 @@ GITHUB_PATH = DATA_FILE
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}"
 GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_PATH}"
 
-MONTH_NAMES_ID = MONTH_NAMES_ID
+MONTH_NAMES_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 MONTH_LOOKUP_ID = {name: i + 1 for i, name in enumerate(MONTH_NAMES_ID)}
 
 
