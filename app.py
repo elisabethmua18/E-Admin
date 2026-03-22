@@ -85,6 +85,9 @@ def merge_defaults(data: dict) -> dict:
         if not isinstance(data.get(list_key), list):
             data[list_key] = []
 
+    for booking in data["bookings"]:
+        booking.setdefault("fee_tim_tambahan", 0)
+
     return data
 
 
@@ -203,7 +206,7 @@ if not st.session_state.auth:
     st.stop()
 
 # --- MENU SIDEBAR ---
-menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN"])
+menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"])
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
@@ -279,9 +282,11 @@ if menu == "BERANDA":
                 
                     isi_layanan = ""
                     for item in f.get('paket_list', []):
-                        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item.get('nama')}</span><span>Rp {float(item.get('price',0))*int(item.get('qty',1)):,.0f}</span></div>"
+                        qty = int(item.get('qty', 1))
+                        isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item.get('nama')}</span><span>Rp {float(item.get('price',0))*qty:,.0f}</span></div>"
                     for item_m in f.get('manual_list', []):
-                        isi_layanan += f"<div style='display:flex; justify-content:space-between;'><span>{item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*int(item_m.get('qty',1)):,.0f}</span></div>"
+                        qty = int(item_m.get('qty', 1))
+                        isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*qty:,.0f}</span></div>"
                 
                     tnc_html = s.get('tnc','').replace('\n','<br>')
                 
@@ -394,10 +399,14 @@ elif menu == "INPUT JADWAL":
         
         # Pilihan Jam
         times = [time(h, m).strftime("%H:%M") for h in range(24) for m in (0, 15, 30, 45)]
+        jam_ready_edit = edit_data.get('jam_ready', '08:00-10:00').split('-')
+        jam_mulai_default = jam_ready_edit[0] if jam_ready_edit and jam_ready_edit[0] in times else '08:00'
+        jam_selesai_default = jam_ready_edit[1] if len(jam_ready_edit) > 1 and jam_ready_edit[1] in times else '10:00'
+        jam_otw_default = edit_data.get('jam_otw', '07:00') if edit_data.get('jam_otw', '07:00') in times else '07:00'
         c1, c2, c3 = st.columns(3)
-        jam_m = c1.selectbox("5. Jam Mulai", times, index=32)
-        jam_s = c2.selectbox("6. Jam Selesai", times, index=40)
-        jam_o = c3.selectbox("7. Jam OTW", times, index=28)
+        jam_m = c1.selectbox("5. Jam Mulai", times, index=times.index(jam_mulai_default))
+        jam_s = c2.selectbox("6. Jam Selesai", times, index=times.index(jam_selesai_default))
+        jam_o = c3.selectbox("7. Jam OTW", times, index=times.index(jam_otw_default))
         
         durasi_otw = st.number_input("8. Durasi OTW (Menit)", min_value=0, value=edit_data.get('durasi_otw', 30))
         
@@ -446,10 +455,14 @@ elif menu == "INPUT JADWAL":
         hire_tim = st.checkbox("Gunakan Tim Tambahan?", value=edit_data.get('hire_tim', False))
         if hire_tim:
             ct1, ct2 = st.columns(2)
-            tim_type = ct1.selectbox("Jenis Tim", ["Hairdo", "Hijabdo", "Hairdo + Hijabdo"])
+            tim_type_options = ["Hairdo", "Hijabdo", "Hairdo + Hijabdo"]
+            default_tim_type = edit_data.get('tim_type', 'Hairdo') if edit_data.get('tim_type', 'Hairdo') in tim_type_options else 'Hairdo'
+            tim_type = ct1.selectbox("Jenis Tim", tim_type_options, index=tim_type_options.index(default_tim_type))
             tim_nama = ct2.text_input("Nama Anggota Tim", value=edit_data.get('tim_nama', ""))
+            fee_tim_tambahan = st.number_input("Fee Tim Tambahan (masuk otomatis ke pengeluaran)", min_value=0, value=int(edit_data.get('fee_tim_tambahan', 0)))
         else:
             tim_type, tim_nama = "-", "-"
+            fee_tim_tambahan = 0
 
         st.divider()
         if st.button("💾 SIMPAN JADWAL KE DATABASE"):
@@ -474,6 +487,7 @@ elif menu == "INPUT JADWAL":
                     "hire_tim": hire_tim,
                     "tim_type": tim_type,
                     "tim_nama": tim_nama,
+                    "fee_tim_tambahan": fee_tim_tambahan,
                     "dp": dp_value,
                     "status": edit_data.get('status', 'PENDING')
                 }
@@ -605,7 +619,29 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    # 2. PEMASUKAN LAIN & PENGELUARAN (MANUAL)
+    # 2. PENGELUARAN OTOMATIS DARI FEE TIM TAMBAHAN
+    st.subheader("🤝 Pengeluaran Otomatis (Fee Tim Tambahan)")
+    list_pengeluaran_tim = []
+    total_out_tim = 0
+    for j in st.session_state.db['bookings']:
+        tgl_parts = j.get('tgl','').split('/')
+        fee_tim = float(j.get('fee_tim_tambahan', 0) or 0)
+        if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year and fee_tim > 0:
+            list_pengeluaran_tim.append({
+                "tgl": j['tgl'],
+                "ket": f"Fee Tim: {j['nama']} - {j.get('tim_nama','-')}",
+                "nom": fee_tim
+            })
+            total_out_tim += fee_tim
+
+    if list_pengeluaran_tim:
+        st.table(pd.DataFrame(list_pengeluaran_tim))
+    else:
+        st.write("Tidak ada fee tim tambahan di bulan ini.")
+
+    st.divider()
+
+    # 3. PEMASUKAN LAIN & PENGELUARAN (MANUAL)
     col_in, col_out = st.columns(2)
     
     with col_in:
@@ -636,14 +672,14 @@ elif menu == "KEUANGAN":
 
     # Hitung Total Manual
     total_in_lain = sum([float(p['nom']) for p in st.session_state.db.get('pemasukan_lain', []) if p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year])
-    # Versi aman yang tidak akan error jika ada data kosong
-    total_out = sum([
+    total_out_manual = sum([
             float(p.get('nom', 0)) 
             for p in st.session_state.db.get('pengeluaran', []) 
             if 'tgl' in p and len(p['tgl'].split('/')) > 2 and p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year
         ])
+    total_out = total_out_manual + total_out_tim
     
-    # 3. RINGKASAN AKHIR
+    # 4. RINGKASAN AKHIR
     st.divider()
     final_omset = omset_jadwal + total_in_lain
     res1, res2, res3 = st.columns(3)
@@ -658,7 +694,70 @@ elif menu == "KEUANGAN":
             if total_in_lain > 0:
                 st.write("**Pemasukan Tambahan:**")
                 st.json([p for p in st.session_state.db['pemasukan_lain'] if p['tgl'].split('/')[1] == sel_month])
-            if total_out > 0:
-                st.write("**Pengeluaran:**")
+            if total_out_tim > 0:
+                st.write("**Pengeluaran Otomatis Fee Tim:**")
+                st.json(list_pengeluaran_tim)
+            if total_out_manual > 0:
+                st.write("**Pengeluaran Manual:**")
                 st.json([p for p in st.session_state.db['pengeluaran'] if p['tgl'].split('/')[1] == sel_month])
                 
+
+
+# --- 6. HAPUS DATA ---
+elif menu == "HAPUS DATA":
+    st.header("🗑️ Hapus Data")
+    st.warning("Hapus data dilakukan permanen. Pastikan data yang dipilih memang benar.")
+
+    tab_booking, tab_pemasukan, tab_pengeluaran = st.tabs(["JADWAL / KLIEN", "PEMASUKAN LAIN", "PENGELUARAN MANUAL"])
+
+    with tab_booking:
+        bookings = st.session_state.db.get('bookings', [])
+        if not bookings:
+            st.info("Belum ada data jadwal.")
+        else:
+            booking_options = {
+                f"{b.get('tgl','-')} | {b.get('inv_no','-')} | {b.get('nama','-')}": idx
+                for idx, b in enumerate(bookings)
+            }
+            selected_booking_label = st.selectbox("Pilih data jadwal yang ingin dihapus", list(booking_options.keys()))
+            selected_booking = bookings[booking_options[selected_booking_label]]
+            st.json(selected_booking)
+            if st.button("HAPUS JADWAL TERPILIH", type="primary"):
+                st.session_state.db['bookings'].pop(booking_options[selected_booking_label])
+                save_data()
+                st.success("Data jadwal berhasil dihapus.")
+                st.rerun()
+
+    with tab_pemasukan:
+        pemasukan_lain = st.session_state.db.get('pemasukan_lain', [])
+        if not pemasukan_lain:
+            st.info("Belum ada pemasukan lain.")
+        else:
+            pemasukan_options = {
+                f"{p.get('tgl','-')} | {p.get('ket','-')} | Rp {float(p.get('nom',0)):,.0f}": idx
+                for idx, p in enumerate(pemasukan_lain)
+            }
+            selected_pemasukan_label = st.selectbox("Pilih pemasukan lain yang ingin dihapus", list(pemasukan_options.keys()))
+            st.json(pemasukan_lain[pemasukan_options[selected_pemasukan_label]])
+            if st.button("HAPUS PEMASUKAN LAIN", type="primary"):
+                st.session_state.db['pemasukan_lain'].pop(pemasukan_options[selected_pemasukan_label])
+                save_data()
+                st.success("Pemasukan lain berhasil dihapus.")
+                st.rerun()
+
+    with tab_pengeluaran:
+        pengeluaran = st.session_state.db.get('pengeluaran', [])
+        if not pengeluaran:
+            st.info("Belum ada pengeluaran manual.")
+        else:
+            pengeluaran_options = {
+                f"{p.get('tgl','-')} | {p.get('ket','-')} | Rp {float(p.get('nom',0)):,.0f}": idx
+                for idx, p in enumerate(pengeluaran)
+            }
+            selected_pengeluaran_label = st.selectbox("Pilih pengeluaran manual yang ingin dihapus", list(pengeluaran_options.keys()))
+            st.json(pengeluaran[pengeluaran_options[selected_pengeluaran_label]])
+            if st.button("HAPUS PENGELUARAN MANUAL", type="primary"):
+                st.session_state.db['pengeluaran'].pop(pengeluaran_options[selected_pengeluaran_label])
+                save_data()
+                st.success("Pengeluaran manual berhasil dihapus.")
+                st.rerun()
