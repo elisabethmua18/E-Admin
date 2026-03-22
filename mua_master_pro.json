@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 3,
+        "next_inv": 4,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -127,6 +127,36 @@
             "fee_tim_tambahan": 125000,
             "dp": 50000,
             "status": "SELESAI (LUNAS)"
+        },
+        {
+            "inv_no": "INV0003",
+            "nama": "Kak Elvina",
+            "tgl": "01/04/2026",
+            "wa": "30303&39",
+            "alamat_mu": "Unimus",
+            "jam_ready": "03:00-04:00",
+            "jam_otw": "04:15",
+            "durasi_otw": 15,
+            "paket_list": [
+                {
+                    "nama": "makeup wisuda+ hijabdo",
+                    "qty": 1,
+                    "price": 250000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir ",
+                    "harga": 15000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 50000,
+            "status": "PENDING"
         }
     ],
     "pengeluaran": [],
