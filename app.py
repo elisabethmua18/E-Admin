@@ -559,7 +559,7 @@ def make_finance_pdf(df, summary_dict, title):
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
-    st.title("ð E-Admin Login")
+    st.title("\U0001F484 E-Admin Login")
     email = st.text_input("Email", value="elisabethmua18@gmail.com")
     pw = st.text_input("Password", type="password")
     if st.button("MASUK"):
@@ -576,7 +576,7 @@ menu = st.sidebar.radio("MENU", menu_list, index=default_index)
 st.session_state["menu"] = menu
 # --- 1. BERANDA ---
 if menu == "BERANDA":
-    st.header("ð¸ Jadwal Elisabeth MUA")
+    st.header("\U0001F338 Jadwal Elisabeth MUA")
     today = date.today()
 
     cal_col1, cal_col2 = st.columns(2)
@@ -624,7 +624,7 @@ if menu == "BERANDA":
                 """, unsafe_allow_html=True)
 
                 st.markdown(
-                    f'<p class="otw-info">ð Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
+                    f'<p class="otw-info">\U0001F697 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
                     unsafe_allow_html=True
                 )
 
@@ -636,12 +636,12 @@ if menu == "BERANDA":
                     st.session_state["menu"] = "INPUT JADWAL"
                     st.rerun()
 
-                if c2.button("â SELESAI", key=f"dn_{i}", use_container_width=True):
+                if c2.button("\u2705 SELESAI", key=f"dn_{i}", use_container_width=True):
                     b["status"] = "SELESAI (LUNAS)"
                     save_data()
                     st.rerun()
 
-                if c3.button("ð FAKTUR", key=f"fkt_{i}", use_container_width=True):
+                if c3.button("\U0001F4C4 FAKTUR", key=f"fkt_{i}", use_container_width=True):
                     st.session_state["current_faktur_inv"] = b.get("inv_no")
                     st.rerun()
 
@@ -650,7 +650,7 @@ if menu == "BERANDA":
                 st.rerun()
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
-    st.header("ð Tambah / Edit Jadwal")
+    st.header("\U0001F4DD Tambah / Edit Jadwal")
     # ... sisa kode input jadwal ...
     
     # Ambil data dari tombol EDIT jika ada
@@ -737,7 +737,7 @@ elif menu == "INPUT JADWAL":
             fee_tim_tambahan = 0
 
         st.divider()
-        if st.button("ð¾ SIMPAN JADWAL KE DATABASE"):
+        if st.button("\U0001F4BE SIMPAN JADWAL KE DATABASE"):
             if not nama_klien:
                 st.error("Nama Klien wajib diisi!")
             else:
@@ -778,7 +778,7 @@ elif menu == "INPUT JADWAL":
                 st.rerun()
                 # --- 3. LAYANAN ---
 elif menu == "LAYANAN":
-    st.header("ð Master Layanan Utama")
+    st.header("\U0001F484 Master Layanan Utama")
     st.info("Tambahkan paket yang sering digunakan di sini agar bisa dipilih cepat saat input jadwal.")
     
     with st.form("master_form"):
@@ -807,7 +807,7 @@ elif menu == "LAYANAN":
 
 # --- 4. PROFIL & SETTING ---
 elif menu == "PROFIL & SETTING":
-    st.header("ð¤ Profil & Setting Faktur")
+    st.header("\U0001F464 Profil & Setting Faktur")
     
     tab_profil, tab_faktur = st.tabs(["PROFIL BISNIS", "SETTING FAKTUR"])
     
@@ -839,7 +839,7 @@ elif menu == "PROFIL & SETTING":
         st.session_state.db['profile']['no_rek'] = st.text_input("Nomor Rekening", st.session_state.db['profile'].get('no_rek', ''))
         st.session_state.db['profile']['an'] = st.text_input("Atas Nama (A/N)", st.session_state.db['profile'].get('an', ''))
         
-        if st.button("ð¾ SIMPAN SEMUA PROFIL"):
+        if st.button("\U0001F4BE SIMPAN SEMUA PROFIL"):
             save_data()
             st.success("Profil Bisnis Berhasil Diperbarui!")
 
@@ -852,12 +852,12 @@ elif menu == "PROFIL & SETTING":
         st.divider()
         st.session_state.db['faktur_settings']['next_inv'] = st.number_input("Nomor Invoice Berikutnya", min_value=1, value=st.session_state.db['faktur_settings'].get('next_inv', 1))
         
-        if st.button("ð¾ SIMPAN SETTING FAKTUR"):
+        if st.button("\U0001F4BE SIMPAN SETTING FAKTUR"):
             save_data()
             st.success("Pengaturan Faktur Berhasil Disimpan!")
             # --- 5. KEUANGAN ---
 elif menu == "KEUANGAN":
-    st.header("ð° Laporan Keuangan Bulanan")
+    st.header("\U0001F4B0 Laporan Keuangan Bulanan")
 
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
@@ -881,7 +881,7 @@ elif menu == "KEUANGAN":
     final_omset = finance_data["final_omset"]
     nett = finance_data["nett"]
 
-    st.subheader("ð Pemasukan Otomatis (Jadwal)")
+    st.subheader("\U0001F4CA Pemasukan Otomatis (Jadwal)")
     if list_pemasukan_jadwal:
         st.table(pd.DataFrame(list_pemasukan_jadwal))
     else:
@@ -889,7 +889,7 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    st.subheader("ð¤ Pengeluaran Otomatis (Fee Tim Tambahan)")
+    st.subheader("\U0001F91D Pengeluaran Otomatis (Fee Tim Tambahan)")
     if list_pengeluaran_tim:
         st.table(pd.DataFrame(list_pengeluaran_tim))
     else:
@@ -900,7 +900,7 @@ elif menu == "KEUANGAN":
     col_in, col_out = st.columns(2)
 
     with col_in:
-        st.subheader("â Penghasilan Lain")
+        st.subheader("\u2795 Penghasilan Lain")
         with st.form("pemasukan_lain_form"):
             ket_in = st.text_input("Keterangan (Misal: Jual Thrift)")
             nom_in = st.number_input("Nominal (Rp)", min_value=0)
@@ -913,7 +913,7 @@ elif menu == "KEUANGAN":
                 save_data(); st.rerun()
 
     with col_out:
-        st.subheader("ð¸ Pengeluaran")
+        st.subheader("\U0001F4B8 Pengeluaran")
         with st.form("pengeluaran_form"):
             ket_out = st.text_input("Keterangan (Misal: Beli Foundation)")
             nom_out = st.number_input("Nominal (Rp)", min_value=0)
@@ -932,7 +932,7 @@ elif menu == "KEUANGAN":
     res3.metric("NETT (Bersih)", format_rupiah(nett))
 
     st.divider()
-    st.subheader("ð¥ Download Laporan")
+    st.subheader("\U0001F4E5 Download Laporan")
     st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
@@ -982,7 +982,7 @@ elif menu == "KEUANGAN":
 
 # --- 6. HAPUS DATA ---
 elif menu == "HAPUS DATA":
-    st.header("ðï¸ Hapus Data")
+    st.header("\U0001F5D1 Hapus Data")
     st.warning("Hapus data dilakukan permanen. Pastikan data yang dipilih memang benar.")
 
     st.subheader("ð Kalender Jadwal Realtime")
