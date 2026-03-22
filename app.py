@@ -7,6 +7,7 @@ import base64
 import pandas as pd
 from io import BytesIO
 from datetime import datetime, time, date
+import calendar
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -203,6 +204,63 @@ def format_rupiah(nominal):
     return f"Rp {float(nominal or 0):,.0f}"
 
 
+def render_month_calendar(bookings, month, year):
+    cal = calendar.Calendar(firstweekday=0)
+    booked_days = {}
+    for b in bookings:
+        try:
+            dt = datetime.strptime(b.get('tgl', ''), "%d/%m/%Y")
+            if dt.month == month and dt.year == year:
+                booked_days.setdefault(dt.day, []).append(b)
+        except Exception:
+            continue
+
+    month_name = {
+        1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni",
+        7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"
+    }[month]
+    day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+
+    html = """
+    <style>
+    .calendar-wrap {background:white; padding:16px; border-radius:16px; box-shadow:2px 2px 10px rgba(0,0,0,0.08);}
+    .calendar-title {font-weight:bold; color:#C85A7C; font-size:22px; margin-bottom:12px;}
+    .calendar-table {width:100%; border-collapse:collapse; table-layout:fixed;}
+    .calendar-table th {background:#F8E6EE; color:#8A4D62; padding:10px 4px; border:1px solid #F0D5E0; font-size:13px;}
+    .calendar-table td {height:78px; vertical-align:top; border:1px solid #F0D5E0; padding:6px; background:#FFF9FB;}
+    .calendar-day {font-weight:bold; color:#333; font-size:14px; margin-bottom:4px;}
+    .calendar-empty {background:#FAFAFA;}
+    .calendar-has-job {background:#EAF3FF !important;}
+    .calendar-badge {display:inline-block; margin-top:4px; background:#2F80ED; color:white; padding:2px 6px; border-radius:999px; font-size:11px; font-weight:bold;}
+    .calendar-job {font-size:11px; color:#444; line-height:1.25; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    </style>
+    """
+    html += f'<div class="calendar-wrap"><div class="calendar-title">Kalender Jadwal {month_name} {year}</div><table class="calendar-table"><thead><tr>'
+    for d in day_names:
+        html += f"<th>{d}</th>"
+    html += "</tr></thead><tbody>"
+
+    for week in cal.monthdayscalendar(year, month):
+        html += "<tr>"
+        for day in week:
+            if day == 0:
+                html += '<td class="calendar-empty"></td>'
+            else:
+                items = booked_days.get(day, [])
+                extra_class = " calendar-has-job" if items else ""
+                html += f'<td class="{extra_class.strip()}"><div class="calendar-day">{day}</div>'
+                if items:
+                    html += f'<div class="calendar-badge">{len(items)} job</div>'
+                    for item in items[:2]:
+                        html += f'<div class="calendar-job">{item.get("jam_ready","")} • {item.get("nama","-")}</div>'
+                    if len(items) > 2:
+                        html += f'<div class="calendar-job">+{len(items)-2} lainnya</div>'
+                html += "</td>"
+        html += "</tr>"
+    html += "</tbody></table></div>"
+    return html, booked_days
+
+
 def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pengeluaran_manual):
     report_rows = []
     omset_jadwal = 0
@@ -308,6 +366,7 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
         "total_out_manual": total_out_manual,
         "total_out": total_out,
         "final_omset": final_omset,
+        "total_pemasukan": final_omset,
         "nett": nett,
         "report_rows": report_rows
     }
@@ -315,11 +374,19 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
 
 def make_finance_excel(df, summary_dict):
     output = BytesIO()
+    export_df = df.copy()
+    export_df.loc[len(export_df)] = {
+        "Tanggal": "",
+        "Keterangan": "TOTAL",
+        "Pemasukan": summary_dict["total_pemasukan"],
+        "Pengeluaran": summary_dict["total_out"]
+    }
+
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Transaksi")
+        export_df.to_excel(writer, index=False, sheet_name="Transaksi")
         pd.DataFrame([
-            {"Keterangan": "Omset (Bruto)", "Nominal": summary_dict["final_omset"]},
-            {"Keterangan": "Pengeluaran", "Nominal": summary_dict["total_out"]},
+            {"Keterangan": "Total Pemasukan", "Nominal": summary_dict["total_pemasukan"]},
+            {"Keterangan": "Total Pengeluaran", "Nominal": summary_dict["total_out"]},
             {"Keterangan": "Nett (Bersih)", "Nominal": summary_dict["nett"]},
         ]).to_excel(writer, index=False, sheet_name="Ringkasan")
 
@@ -337,7 +404,7 @@ def make_finance_excel(df, summary_dict):
 
             for row in ws.iter_rows(min_row=2):
                 for cell in row:
-                    if isinstance(cell.value, (int, float)) and cell.column in (3, 4):
+                    if isinstance(cell.value, (int, float)) and ((ws.title == "Transaksi" and cell.column in (3, 4)) or (ws.title == "Ringkasan" and cell.column == 2)):
                         cell.number_format = '"Rp" #,##0'
     output.seek(0)
     return output
@@ -372,8 +439,8 @@ def make_finance_pdf(df, summary_dict, title):
 
     summary_data = [
         ["Ringkasan", "Nominal"],
-        ["Omset (Bruto)", format_rupiah(summary_dict['final_omset'])],
-        ["Pengeluaran", format_rupiah(summary_dict['total_out'])],
+        ["Total Pemasukan", format_rupiah(summary_dict['total_pemasukan'])],
+        ["Total Pengeluaran", format_rupiah(summary_dict['total_out'])],
         ["Nett (Bersih)", format_rupiah(summary_dict['nett'])],
     ]
     summary_tbl = Table(summary_data, colWidths=[250, 220])
@@ -398,6 +465,12 @@ def make_finance_pdf(df, summary_dict, title):
             format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-",
             format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-"
         ])
+    table_data.append([
+        "",
+        "TOTAL",
+        format_rupiah(summary_dict["total_pemasukan"]),
+        format_rupiah(summary_dict["total_out"])
+    ])
 
     tbl = Table(table_data, colWidths=[58, 220, 95, 100], repeatRows=1)
     table_style = [
@@ -414,9 +487,13 @@ def make_finance_pdf(df, summary_dict, title):
         ("TOPPADDING", (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]
-    for i in range(1, len(table_data)):
+    for i in range(1, len(table_data)-1):
         bg = "#FFF7FA" if i % 2 == 1 else "#FFFFFF"
         table_style.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor(bg)))
+    table_style.extend([
+        ("BACKGROUND", (0, len(table_data)-1), (-1, len(table_data)-1), colors.HexColor("#FDE3EC")),
+        ("FONTNAME", (0, len(table_data)-1), (-1, len(table_data)-1), "Helvetica-Bold"),
+    ])
     tbl.setStyle(TableStyle(table_style))
 
     elements.append(tbl)
@@ -898,13 +975,23 @@ elif menu == "KEUANGAN":
     st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
-        st.dataframe(laporan_df, use_container_width=True)
+        laporan_tampil = laporan_df.copy()
+        laporan_tampil.loc[len(laporan_tampil)] = {
+            "Tanggal": "",
+            "Keterangan": "TOTAL",
+            "Pemasukan": finance_data["total_pemasukan"],
+            "Pengeluaran": finance_data["total_out"]
+        }
+        st.dataframe(laporan_tampil, use_container_width=True)
+
+        st.write(f"**Total Pemasukan:** {format_rupiah(finance_data['total_pemasukan'])}")
+        st.write(f"**Total Pengeluaran:** {format_rupiah(finance_data['total_out'])}")
 
         report_title = f"Laporan Keuangan {sel_month}/{sel_year}"
         excel_buffer = make_finance_excel(laporan_df, finance_data)
         pdf_buffer = make_finance_pdf(laporan_df, finance_data, report_title)
 
-        d1, d2, d3 = st.columns(3)
+        d1, d2 = st.columns(2)
         d1.download_button(
             "📊 Download Excel",
             data=excel_buffer,
@@ -917,9 +1004,6 @@ elif menu == "KEUANGAN":
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
             mime="application/pdf"
         )
-        if d3.button("⬅️ Kembali ke Admin"):
-            st.session_state.menu_override = "BERANDA"
-            st.rerun()
     else:
         st.info("Belum ada data laporan untuk bulan ini.")
 
