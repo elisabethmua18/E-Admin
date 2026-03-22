@@ -616,151 +616,35 @@ if menu == "BERANDA":
             with st.container():
                 st.markdown(f"""
                 <div class="job-card">
-                    <h3 style="margin:0; color:#F19CBB;">
-<h3 style="margin:0; color:#F19CBB;">
-{b.get('nama','-')} - {b.get('inv_no','-')}
-</h3>
-
-<p style="margin:5px 0;">
-<b>Tim:</b> {b.get('tim_type','-') if b.get('hire_tim') else '-'}
-| <b>Anggota:</b> {b.get('tim_nama','-') if b.get('hire_tim') else '-'}
-</p>
-
-<p style="margin:5px 0;">
-<b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
-</p>
-
-<p style="margin:5px 0;">
-<b>Status:</b> {b.get('status','PENDING')}
-</p>
-</p>
+                    <h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
+                    <p style="margin:8px 0 0 0;"><b>Tim:</b> {b.get('tim_type','-') if b.get('hire_tim') else '-'} | <b>Anggota:</b> {b.get('tim_nama','-') if b.get('hire_tim') else '-'}</p>
+                    <p style="margin:6px 0 0 0;"><b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}</p>
+                    <p style="margin:6px 0 0 0;"><b>Status:</b> {b.get('status','PENDING')}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                st.markdown(f'<p class="otw-info">ð Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
-                
-                c1, c2, c3 = st.columns(3)
-                if c1.button("EDIT", key=f"ed_{i}"):
-                    st.session_state.edit_data = b
-                    st.session_state.input_pakets = b.get('paket_list', [])
-                    st.session_state.input_manuals = b.get('manual_list', [])
-                    st.warning("Data siap diedit! Silakan klik menu 'INPUT JADWAL'")
-                
-                if c2.button("â SELESAI", key=f"dn_{i}"):
-                    b['status'] = "SELESAI (LUNAS)"
-                    save_data(); st.rerun()
-                
 
-                if c3.button("ð FAKTUR", key=f"fkt_{i}"):
-                    st.session_state.current_faktur = b
+                st.markdown(
+                    f'<p class="otw-info">ð Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
+                    unsafe_allow_html=True
+                )
+
+                c1, c2, c3 = st.columns(3)
+                if c1.button("EDIT", key=f"ed_{i}", use_container_width=True):
+                    st.session_state["edit_data"] = dict(b)
+                    st.session_state["input_pakets"] = [dict(x) for x in b.get("paket_list", [])]
+                    st.session_state["input_manuals"] = [dict(x) for x in b.get("manual_list", [])]
+                    st.session_state["menu"] = "INPUT JADWAL"
                     st.rerun()
 
-    if 'current_faktur' in st.session_state:
-        f = st.session_state.current_faktur
-        p = st.session_state.db['profile']
-        s = st.session_state.db['faktur_settings']
+                if c2.button("â SELESAI", key=f"dn_{i}", use_container_width=True):
+                    b["status"] = "SELESAI (LUNAS)"
+                    save_data()
+                    st.rerun()
 
-        total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
-        total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
-        total_semua = total_p + total_m
-        dp_val = float(f.get('dp', 0))
-        sisa_val = max(total_semua - dp_val, 0)
+                if c3.button("ð FAKTUR", key=f"fkt_{i}", use_container_width=True):
+                    st.session_state["current_faktur_inv"] = b.get("inv_no")
+                    st.rerun()
 
-        is_lunas = f.get('status') == "SELESAI (LUNAS)"
-        warna_tema = "#4caf50" if is_lunas else "#F19CBB"
-        stempel_text = "LUNAS" if is_lunas else "BOOKED"
-
-        logo_html = ""
-
-        isi_layanan = ""
-        for item in f.get('paket_list', []):
-            qty = int(item.get('qty', 1))
-            isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item.get('nama')}</span><span>Rp {float(item.get('price',0))*qty:,.0f}</span></div>"
-        for item_m in f.get('manual_list', []):
-            qty = int(item_m.get('qty', 1))
-            isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*qty:,.0f}</span></div>"
-
-        tnc_html = s.get('tnc','').replace('\n','<br>')
-
-        html_final = f"""
-        <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
-           <div style="
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%, -50%) rotate(-15deg);
-            font-size:70px;
-            font-weight:bold;
-            color:{warna_tema};
-            border:5px solid {warna_tema};
-            padding:20px 40px;
-            opacity:0.40;
-            border-radius:10px;
-            pointer-events:none;
-        ">
-            {stempel_text}
-        </div>
-            <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
-                <div>
-                    <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
-                    <p style="margin:0; font-size:11px; color:#888;">
-                        {p.get('alamat','')}<br>
-                        WA: {p.get('hp','')}
-                    </p>
-                </div>
-                <img src="{p.get('logo','')}" style="height:60px;">
-            </div>
-
-            <hr>
-
-            <b>Invoice:</b> {f.get('inv_no')}<br>
-            <b>Tanggal:</b> {f.get('tgl')}<br>
-            <b>Klien:</b> {f.get('nama')}<br>
-            <b>WA:</b> {f.get('wa')}<br>
-            <b>Lokasi:</b> {f.get('alamat_mu')}<br>
-            <b>Jam:</b> {f.get('jam_ready')}<br>
-
-            <hr>
-
-            <b>RINCIAN</b>
-            {isi_layanan}
-
-            <hr>
-
-            <b>Total:</b> Rp {total_semua:,.0f}<br>
-            <b>DP:</b> Rp {dp_val:,.0f}<br>
-            <b>Sisa:</b> Rp {sisa_val:,.0f} { '(LUNAS)' if is_lunas else '' }
-
-            <hr>
-
-            <b>Transfer:</b><br>
-            {p.get('bank')} {p.get('no_rek')}<br>
-            a/n {p.get('an')}
-
-            <br><br>
-
-            <b>Syarat & Ketentuan</b><br>
-            {tnc_html}
-
-            <br><br>
-
-            <center><i>{s.get('salam')}</i></center>
-
-            <div style="text-align:right;margin-top:40px;">
-            {s.get('signature')}
-            </div>
-        </div>
-        """
-
-        st.divider()
-        components.html(html_final, height=900, scrolling=True)
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.download_button("ð¾ DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
-        with col_b:
-            if st.button("â TUTUP", key="close_current_faktur"):
                 if 'current_faktur_inv' in st.session_state:
                     del st.session_state['current_faktur_inv']
                 st.rerun()
