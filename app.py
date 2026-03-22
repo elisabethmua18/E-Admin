@@ -562,8 +562,8 @@ if menu == "BERANDA":
     calendar_html, _ = render_month_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, target_menu="BERANDA", calendar_key="beranda")
     components.html(calendar_html, height=260, scrolling=False)
 
-    selected_default = st.session_state.pop("selected_date_override", today)
-    selected_date = st.date_input("Pilih Tanggal", value=selected_default)
+    selected_date = st.session_state.pop("selected_date_override", today)
+    st.caption(f"Menampilkan jadwal untuk: **{selected_date.strftime('%d/%m/%Y')}**")
     st.divider()
     
     selected_str = selected_date.strftime("%d/%m/%Y")
