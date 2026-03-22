@@ -24,6 +24,11 @@ st.markdown("""
         background-color: #F19CBB; color: white;
         border-radius: 10px; font-weight: bold; width: 100%;
     }
+    div.stButton > button[kind="primary"] {
+        background-color: #2F80ED !important;
+        border: 1px solid #2F80ED !important;
+        color: white !important;
+    }
     .job-card {
         background-color: white; padding: 20px; border-radius: 15px;
         margin-bottom: 15px; border-left: 10px solid #F19CBB; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
@@ -207,7 +212,8 @@ def format_rupiah(nominal):
     return f"Rp {float(nominal or 0):,.0f}"
 
 
-def render_month_calendar(bookings, month, year, target_menu="BERANDA", calendar_key="main"):
+
+def display_clickable_calendar(bookings, month, year, key_prefix="main"):
     cal = calendar.Calendar(firstweekday=0)
     booked_days = {}
     for b in bookings:
@@ -221,42 +227,51 @@ def render_month_calendar(bookings, month, year, target_menu="BERANDA", calendar
     month_name = MONTH_NAMES_ID[month - 1]
     day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
-    html = """
-    <style>
-    .compact-calendar-wrap {background:white; padding:10px; border-radius:14px; box-shadow:2px 2px 10px rgba(0,0,0,0.08); margin-bottom:10px;}
-    .compact-calendar-title {font-weight:700; color:#C85A7C; font-size:16px; margin-bottom:8px; text-align:center;}
-    .compact-calendar-table {width:100%; border-collapse:separate; border-spacing:4px; table-layout:fixed;}
-    .compact-calendar-table th {font-size:11px; color:#8A4D62; padding:2px 0; font-weight:700;}
-    .compact-calendar-day {height:38px; border-radius:10px; background:#FFF9FB; border:1px solid #F0D5E0; text-align:center; vertical-align:middle; font-size:12px; font-weight:700; color:#333;}
-    .compact-calendar-empty {height:38px;}
-    .compact-calendar-link {display:flex; align-items:center; justify-content:center; width:100%; height:100%; text-decoration:none; color:#2F80ED; background:#EAF3FF; border-radius:10px; position:relative; font-weight:800;}
-    .compact-calendar-link::after {content:''; position:absolute; bottom:4px; width:6px; height:6px; background:#2F80ED; border-radius:50%;}
-    .compact-calendar-num {display:flex; align-items:center; justify-content:center; width:100%; height:100%;}
-    </style>
-    """
-    html += f'<div class="compact-calendar-wrap"><div class="compact-calendar-title">Kalender Jadwal {month_name} {year}</div><table class="compact-calendar-table"><thead><tr>'
-    for d in day_names:
-        html += f"<th>{d}</th>"
-    html += "</tr></thead><tbody>"
+    st.markdown(
+        f"""
+        <div style="background:white;padding:10px;border-radius:14px;box-shadow:2px 2px 10px rgba(0,0,0,0.08);margin-bottom:10px;">
+            <div style="font-weight:700;color:#C85A7C;font-size:16px;margin-bottom:8px;text-align:center;">
+                Kalender Jadwal {month_name} {year}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    header_cols = st.columns(7, gap="small")
+    for col, day_name in zip(header_cols, day_names):
+        col.markdown(
+            f"<div style='text-align:center;font-size:11px;font-weight:700;color:#8A4D62;margin-bottom:2px;'>{day_name}</div>",
+            unsafe_allow_html=True
+        )
 
     for week in cal.monthdayscalendar(year, month):
-        html += "<tr>"
-        for day in week:
-            if day == 0:
-                html += '<td class="compact-calendar-empty"></td>'
-            else:
-                items = booked_days.get(day, [])
-                selected_iso = f"{year:04d}-{month:02d}-{day:02d}"
-                url = f"?menu={target_menu}&selected_date={selected_iso}&beranda_cal_month={month}&beranda_cal_year={year}&hapus_cal_month={month}&hapus_cal_year={year}&calendar_click={calendar_key}"
-                html += '<td class="compact-calendar-day">'
-                if items:
-                    html += f'<a class="compact-calendar-link" href="{url}">{day}</a>'
+        cols = st.columns(7, gap="small")
+        for i, day in enumerate(week):
+            with cols[i]:
+                if day == 0:
+                    st.markdown("<div style='height:34px;'></div>", unsafe_allow_html=True)
                 else:
-                    html += f'<div class="compact-calendar-num">{day}</div>'
-                html += '</td>'
-        html += "</tr>"
-    html += "</tbody></table></div>"
-    return html, booked_days
+                    items = booked_days.get(day, [])
+                    if items:
+                        if st.button(str(day), key=f"{key_prefix}_{year}_{month}_{day}", type="primary", use_container_width=True):
+                            st.session_state["selected_date_override"] = date(year, month, day)
+                            st.session_state["menu_override"] = "BERANDA"
+                            st.rerun()
+                    else:
+                        st.markdown(
+                            f"""
+                            <div style="
+                                height:38px; display:flex; align-items:center; justify-content:center;
+                                border-radius:10px; background:#FFF9FB; border:1px solid #F0D5E0;
+                                color:#333; font-size:12px; font-weight:700;">
+                                {day}
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+    return booked_days
 
 
 def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pengeluaran_manual):
@@ -559,8 +574,7 @@ if menu == "BERANDA":
     st.session_state["beranda_cal_month"] = selected_month
     st.session_state["beranda_cal_year"] = selected_year
 
-    calendar_html, _ = render_month_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, target_menu="BERANDA", calendar_key="beranda")
-    components.html(calendar_html, height=260, scrolling=False)
+    display_clickable_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, key_prefix="beranda")
 
     selected_date = st.session_state.pop("selected_date_override", today)
     st.caption(f"Menampilkan jadwal untuk: **{selected_date.strftime('%d/%m/%Y')}**")
