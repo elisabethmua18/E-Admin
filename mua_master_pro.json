@@ -99,13 +99,6 @@
             "status": "PENDING"
         }
     ],
-    "pengeluaran": [
-        {
-            "ket": "bedak YOU",
-            "nominal": 120000,
-            "bulan": "03",
-            "tahun": "2026"
-        }
-    ],
+    "pengeluaran": [],
     "pemasukan_lain": []
 }
