@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 1,
+        "next_inv": 2,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -55,6 +55,41 @@
             "tim_type": "Hairdo",
             "tim_nama": "Kak Ovie",
             "dp": 200000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0001",
+            "nama": "Kak Emhy",
+            "tgl": "01/04/2026",
+            "wa": "085242002916",
+            "alamat_mu": "Hotel Cozzy Kedungmundu",
+            "jam_ready": "04:30-06:00",
+            "jam_otw": "06:15",
+            "durasi_otw": 20,
+            "paket_list": [
+                {
+                    "nama": "makeup pendamping wisuda+ hijabdo",
+                    "qty": 1,
+                    "price": 200000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Alis",
+                    "harga": 20000,
+                    "qty": 1
+                },
+                {
+                    "nama": "Bulumata",
+                    "harga": 25000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 100000,
             "status": "PENDING"
         }
     ],
