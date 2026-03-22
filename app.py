@@ -228,93 +228,72 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main", clickab
     month_name = MONTH_NAMES_ID[month - 1]
     day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
+    st.markdown(
+        f"""
+        <div style="background:white;padding:14px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin:8px 0 14px 0;">
+            <div style="font-weight:700;color:#C85A7C;font-size:18px;text-align:center;margin-bottom:8px;">
+                Kalender Jadwal {month_name} {year}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    header_cols = st.columns(7, gap="small")
+    for idx, day_name in enumerate(day_names):
+        header_cols[idx].markdown(
+            f"<div style='text-align:center;font-weight:700;color:#8A4D62;font-size:12px;'>{day_name}</div>",
+            unsafe_allow_html=True
+        )
+
     weeks = cal.monthdayscalendar(year, month)
-    rows_html = []
-    today_val = date.today()
-    for week in weeks:
-        cells = []
-        for day in week:
+    for week_idx, week in enumerate(weeks):
+        cols = st.columns(7, gap="small")
+        for day_idx, day in enumerate(week):
+            col = cols[day_idx]
             if day == 0:
-                cells.append("<td style='padding:2px;height:34px;'></td>")
+                col.markdown("<div style='height:38px;'></div>", unsafe_allow_html=True)
                 continue
 
             items = booked_days.get(day, [])
-            is_today = today_val.year == year and today_val.month == month and today_val.day == day
+            is_booked = len(items) > 0
+            button_key = f"{key_prefix}_{year}_{month}_{week_idx}_{day_idx}_{day}"
 
-            bg = "#4A90E2" if items else "#FFFFFF"
-            text_color = "#FFFFFF" if items else "#333333"
-            border = "2px solid #44B86A" if is_today else "1px solid #EBC2D0"
-            label = f"{day}"
-            if items:
-                label = f"{day}<div style='font-size:8px;line-height:1;margin-top:1px;'>â¢</div>"
-
-            cells.append(
-                f"""
-                <td style="padding:2px; width:14.28%;">
-                    <div style="
-                        min-height:34px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        flex-direction:column;
-                        border-radius:8px;
-                        background:{bg};
-                        color:{text_color};
-                        border:{border};
-                        font-size:12px;
-                        font-weight:700;
-                    ">{label}</div>
-                </td>
-                """
-            )
-        rows_html.append("<tr>" + "".join(cells) + "</tr>")
-
-    header_html = "".join(
-        f"<th style='padding:4px 2px;font-size:10px;color:#8A4D62;font-weight:700;text-align:center;'>{d}</th>"
-        for d in day_names
-    )
-
-    calendar_html = f"""
-    <div style="background:white;padding:10px;border-radius:14px;box-shadow:2px 2px 10px rgba(0,0,0,0.08);margin-bottom:10px;">
-        <div style="font-weight:700;color:#C85A7C;font-size:16px;margin-bottom:8px;text-align:center;">
-            Kalender Jadwal {month_name} {year}
-        </div>
-        <table style="width:100%;border-collapse:separate;border-spacing:0 3px;table-layout:fixed;">
-            <thead>
-                <tr>{header_html}</tr>
-            </thead>
-            <tbody>
-                {''.join(rows_html)}
-            </tbody>
-        </table>
-    </div>
-    """
-    components.html(calendar_html, height=320, scrolling=False)
-
-    if clickable and show_picker:
-        if booked_days:
-            st.caption("Tanggal biru menandakan ada jadwal. Ketuk tombol tanggal di bawah untuk membuka jadwal hari itu.")
-            sorted_days = sorted(booked_days.keys())
-            for day in sorted_days:
-                items = booked_days[day]
-                names = ", ".join(x.get("nama", "-") for x in items[:2])
-                if len(items) > 2:
-                    names += f" +{len(items)-2} lagi"
-                label = f"{day:02d} {month_name[:3]} â¢ {names}"
-                if st.button(label, key=f"{key_prefix}_pick_{year}_{month}_{day}", use_container_width=True):
+            if clickable and is_booked:
+                if col.button(f"{day}", key=button_key, use_container_width=True, type="primary"):
                     st.session_state["selected_date_active"] = date(year, month, day)
                     st.session_state["menu"] = "BERANDA"
                     st.rerun()
+            else:
+                bg = "#4A90E2" if is_booked else "#FFFFFF"
+                fg = "#FFFFFF" if is_booked else "#333333"
+                border = "1px solid #D8A8B9"
+                col.markdown(
+                    f"""
+                    <div style="
+                        min-height:38px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:12px;
+                        background:{bg};
+                        color:{fg};
+                        border:{border};
+                        font-weight:700;
+                        font-size:15px;
+                        margin-top:2px;
+                    ">{day}</div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    if show_picker:
+        if booked_days:
+            st.caption("Tanggal biru menandakan ada jadwal. Ketuk tanggal biru untuk membuka jadwal hari itu.")
         else:
-            st.caption("Belum ada schedule pada bulan ini.")
-    elif booked_days:
-        total_jobs = sum(len(v) for v in booked_days.values())
-        st.caption(f"Tanggal warna biru menandakan ada jadwal. Total job bulan ini: {total_jobs}")
-    else:
-        st.caption("Belum ada jadwal pada bulan ini. Semua tanggal tampil normal.")
+            st.caption("Belum ada jadwal pada bulan ini.")
 
     return booked_days
-
 
 def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pengeluaran_manual):
     report_rows = []
@@ -559,7 +538,7 @@ def make_finance_pdf(df, summary_dict, title):
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
-    st.title("\U0001F484 E-Admin Login")
+    st.title("E-Admin Login")
     email = st.text_input("Email", value="elisabethmua18@gmail.com")
     pw = st.text_input("Password", type="password")
     if st.button("MASUK"):
@@ -576,7 +555,7 @@ menu = st.sidebar.radio("MENU", menu_list, index=default_index)
 st.session_state["menu"] = menu
 # --- 1. BERANDA ---
 if menu == "BERANDA":
-    st.header("\U0001F338 Jadwal Elisabeth MUA")
+    st.header("Jadwal Elisabeth MUA")
     today = date.today()
 
     cal_col1, cal_col2 = st.columns(2)
@@ -597,6 +576,22 @@ if menu == "BERANDA":
     selected_month = MONTH_LOOKUP_ID[selected_month_name]
     st.session_state["beranda_cal_month"] = selected_month
     st.session_state["beranda_cal_year"] = selected_year
+
+    if "selected_date_active" not in st.session_state:
+        st.session_state["selected_date_active"] = today
+
+    current_active = st.session_state["selected_date_active"]
+    if current_active.month != selected_month or current_active.year != selected_year:
+        booked_days_month = []
+        for b in st.session_state.db.get('bookings', []):
+            try:
+                dt = datetime.strptime(b.get('tgl', ''), "%d/%m/%Y")
+                if dt.month == selected_month and dt.year == selected_year:
+                    booked_days_month.append(dt.day)
+            except Exception:
+                pass
+        default_day = min(booked_days_month) if booked_days_month else 1
+        st.session_state["selected_date_active"] = date(selected_year, selected_month, default_day)
 
     display_clickable_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, key_prefix="beranda")
 
@@ -624,7 +619,7 @@ if menu == "BERANDA":
                 """, unsafe_allow_html=True)
 
                 st.markdown(
-                    f'<p class="otw-info">\U0001F697 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
+                    f'<p class="otw-info">Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
                     unsafe_allow_html=True
                 )
 
@@ -636,12 +631,12 @@ if menu == "BERANDA":
                     st.session_state["menu"] = "INPUT JADWAL"
                     st.rerun()
 
-                if c2.button("\u2705 SELESAI", key=f"dn_{i}", use_container_width=True):
+                if c2.button("SELESAI", key=f"dn_{i}", use_container_width=True):
                     b["status"] = "SELESAI (LUNAS)"
                     save_data()
                     st.rerun()
 
-                if c3.button("\U0001F4C4 FAKTUR", key=f"fkt_{i}", use_container_width=True):
+                if c3.button("FAKTUR", key=f"fkt_{i}", use_container_width=True):
                     st.session_state["current_faktur_inv"] = b.get("inv_no")
                     st.rerun()
 
@@ -650,7 +645,7 @@ if menu == "BERANDA":
                 st.rerun()
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
-    st.header("\U0001F4DD Tambah / Edit Jadwal")
+    st.header("Tambah / Edit Jadwal")
     # ... sisa kode input jadwal ...
     
     # Ambil data dari tombol EDIT jika ada
@@ -701,7 +696,7 @@ elif menu == "INPUT JADWAL":
             cp1, cp2, cp3 = st.columns([3, 1, 0.5])
             cp1.markdown(f"**{item.get('nama','')}**")
             item['qty'] = cp2.number_input("Qty", min_value=1, key=f"qty_p_{i}", value=item.get('qty', 1))
-            if cp3.button("â", key=f"del_p_{i}"):
+            if cp3.button("X", key=f"del_p_{i}"):
                 st.session_state.input_pakets.pop(i)
                 st.rerun()
 
@@ -716,7 +711,7 @@ elif menu == "INPUT JADWAL":
             item_m['nama'] = cm1.text_input("Keterangan", key=f"m_nama_{j}", value=item_m.get('nama',''))
             item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m.get('harga', 0))
             item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m.get('qty', 1))
-            if cm4.button("â", key=f"del_m_{j}"):
+            if cm4.button("X", key=f"del_m_{j}"):
                 st.session_state.input_manuals.pop(j)
                 st.rerun()
 
@@ -737,7 +732,7 @@ elif menu == "INPUT JADWAL":
             fee_tim_tambahan = 0
 
         st.divider()
-        if st.button("\U0001F4BE SIMPAN JADWAL KE DATABASE"):
+        if st.button("SIMPAN JADWAL KE DATABASE"):
             if not nama_klien:
                 st.error("Nama Klien wajib diisi!")
             else:
@@ -778,7 +773,7 @@ elif menu == "INPUT JADWAL":
                 st.rerun()
                 # --- 3. LAYANAN ---
 elif menu == "LAYANAN":
-    st.header("\U0001F484 Master Layanan Utama")
+    st.header("Master Layanan Utama")
     st.info("Tambahkan paket yang sering digunakan di sini agar bisa dipilih cepat saat input jadwal.")
     
     with st.form("master_form"):
@@ -807,7 +802,7 @@ elif menu == "LAYANAN":
 
 # --- 4. PROFIL & SETTING ---
 elif menu == "PROFIL & SETTING":
-    st.header("\U0001F464 Profil & Setting Faktur")
+    st.header("Profil & Setting Faktur")
     
     tab_profil, tab_faktur = st.tabs(["PROFIL BISNIS", "SETTING FAKTUR"])
     
@@ -839,7 +834,7 @@ elif menu == "PROFIL & SETTING":
         st.session_state.db['profile']['no_rek'] = st.text_input("Nomor Rekening", st.session_state.db['profile'].get('no_rek', ''))
         st.session_state.db['profile']['an'] = st.text_input("Atas Nama (A/N)", st.session_state.db['profile'].get('an', ''))
         
-        if st.button("\U0001F4BE SIMPAN SEMUA PROFIL"):
+        if st.button("SIMPAN SEMUA PROFIL"):
             save_data()
             st.success("Profil Bisnis Berhasil Diperbarui!")
 
@@ -852,12 +847,12 @@ elif menu == "PROFIL & SETTING":
         st.divider()
         st.session_state.db['faktur_settings']['next_inv'] = st.number_input("Nomor Invoice Berikutnya", min_value=1, value=st.session_state.db['faktur_settings'].get('next_inv', 1))
         
-        if st.button("\U0001F4BE SIMPAN SETTING FAKTUR"):
+        if st.button("SIMPAN SETTING FAKTUR"):
             save_data()
             st.success("Pengaturan Faktur Berhasil Disimpan!")
             # --- 5. KEUANGAN ---
 elif menu == "KEUANGAN":
-    st.header("\U0001F4B0 Laporan Keuangan Bulanan")
+    st.header("Laporan Keuangan Bulanan")
 
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
@@ -881,7 +876,7 @@ elif menu == "KEUANGAN":
     final_omset = finance_data["final_omset"]
     nett = finance_data["nett"]
 
-    st.subheader("\U0001F4CA Pemasukan Otomatis (Jadwal)")
+    st.subheader("Pemasukan Otomatis (Jadwal)")
     if list_pemasukan_jadwal:
         st.table(pd.DataFrame(list_pemasukan_jadwal))
     else:
@@ -889,7 +884,7 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    st.subheader("\U0001F91D Pengeluaran Otomatis (Fee Tim Tambahan)")
+    st.subheader("Pengeluaran Otomatis (Fee Tim Tambahan)")
     if list_pengeluaran_tim:
         st.table(pd.DataFrame(list_pengeluaran_tim))
     else:
@@ -900,7 +895,7 @@ elif menu == "KEUANGAN":
     col_in, col_out = st.columns(2)
 
     with col_in:
-        st.subheader("\u2795 Penghasilan Lain")
+        st.subheader("Penghasilan Lain")
         with st.form("pemasukan_lain_form"):
             ket_in = st.text_input("Keterangan (Misal: Jual Thrift)")
             nom_in = st.number_input("Nominal (Rp)", min_value=0)
@@ -913,7 +908,7 @@ elif menu == "KEUANGAN":
                 save_data(); st.rerun()
 
     with col_out:
-        st.subheader("\U0001F4B8 Pengeluaran")
+        st.subheader("Pengeluaran")
         with st.form("pengeluaran_form"):
             ket_out = st.text_input("Keterangan (Misal: Beli Foundation)")
             nom_out = st.number_input("Nominal (Rp)", min_value=0)
@@ -932,7 +927,7 @@ elif menu == "KEUANGAN":
     res3.metric("NETT (Bersih)", format_rupiah(nett))
 
     st.divider()
-    st.subheader("\U0001F4E5 Download Laporan")
+    st.subheader("Download Laporan")
     st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
@@ -954,13 +949,13 @@ elif menu == "KEUANGAN":
 
         d1, d2 = st.columns(2)
         d1.download_button(
-            "ð Download Excel",
+            "Download Excel",
             data=excel_buffer,
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         d2.download_button(
-            "ð Download PDF",
+            "Download PDF",
             data=pdf_buffer,
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
             mime="application/pdf"
@@ -982,10 +977,10 @@ elif menu == "KEUANGAN":
 
 # --- 6. HAPUS DATA ---
 elif menu == "HAPUS DATA":
-    st.header("\U0001F5D1 Hapus Data")
+    st.header("Hapus Data")
     st.warning("Hapus data dilakukan permanen. Pastikan data yang dipilih memang benar.")
 
-    st.subheader("ð Kalender Jadwal Realtime")
+    st.subheader("Kalender Jadwal Realtime")
     today = date.today()
     del_col1, del_col2 = st.columns(2)
     delete_current_month = int(st.session_state.get("hapus_cal_month", today.month))
@@ -1069,3 +1064,4 @@ elif menu == "HAPUS DATA":
                 save_data()
                 st.success("Pengeluaran manual berhasil dihapus.")
                 st.rerun()
+
