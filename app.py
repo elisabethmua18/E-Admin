@@ -215,7 +215,7 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
         if len(tgl_parts) != 3 or tgl_parts[1] != sel_month or tgl_parts[2] != sel_year:
             continue
 
-        total_klien = sum(float(p.get('price', 0)) * int(p.get('qty', 1)) for p in j.get('paket_list', [])) +                       sum(float(m.get('harga', 0)) * int(m.get('qty', 1)) for m in j.get('manual_list', []))
+        total_klien = sum(float(p.get('price', 0)) * int(p.get('qty', 1)) for p in j.get('paket_list', [])) +             sum(float(m.get('harga', 0)) * int(m.get('qty', 1)) for m in j.get('manual_list', []))
         dp_klien = float(j.get('dp', 0) or 0)
 
         if j.get('status') == "SELESAI (LUNAS)":
@@ -224,18 +224,18 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                 list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"DP: {j['nama']}", "nom": dp_klien})
                 report_rows.append({
                     "Tanggal": j['tgl'],
-                    "Keterangan": f"DP: {j['nama']}",
-                    "Jenis": "Pemasukan Otomatis",
-                    "Nominal": dp_klien
+                    "Keterangan": f"DP: {j['nama']} (ot)",
+                    "Pemasukan": dp_klien,
+                    "Pengeluaran": 0
                 })
                 omset_jadwal += dp_klien
             if pelunasan > 0:
                 list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"Pelunasan: {j['nama']}", "nom": pelunasan})
                 report_rows.append({
                     "Tanggal": j['tgl'],
-                    "Keterangan": f"Pelunasan: {j['nama']}",
-                    "Jenis": "Pemasukan Otomatis",
-                    "Nominal": pelunasan
+                    "Keterangan": f"Pelunasan: {j['nama']} (ot)",
+                    "Pemasukan": pelunasan,
+                    "Pengeluaran": 0
                 })
                 omset_jadwal += pelunasan
         else:
@@ -243,9 +243,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                 list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"DP: {j['nama']}", "nom": dp_klien})
                 report_rows.append({
                     "Tanggal": j['tgl'],
-                    "Keterangan": f"DP: {j['nama']}",
-                    "Jenis": "Pemasukan Otomatis",
-                    "Nominal": dp_klien
+                    "Keterangan": f"DP: {j['nama']} (ot)",
+                    "Pemasukan": dp_klien,
+                    "Pengeluaran": 0
                 })
                 omset_jadwal += dp_klien
 
@@ -255,9 +255,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
             list_pengeluaran_tim.append({"tgl": j['tgl'], "ket": ket_fee, "nom": fee_tim})
             report_rows.append({
                 "Tanggal": j['tgl'],
-                "Keterangan": ket_fee,
-                "Jenis": "Pengeluaran Otomatis",
-                "Nominal": fee_tim
+                "Keterangan": f"{ket_fee} (ot)",
+                "Pemasukan": 0,
+                "Pengeluaran": fee_tim
             })
             total_out_tim += fee_tim
 
@@ -269,9 +269,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
             total_in_lain += nominal
             report_rows.append({
                 "Tanggal": p.get('tgl', ''),
-                "Keterangan": p.get('ket', ''),
-                "Jenis": "Pemasukan Lain",
-                "Nominal": nominal
+                "Keterangan": f"{p.get('ket', '')} (mn)",
+                "Pemasukan": nominal,
+                "Pengeluaran": 0
             })
 
     total_out_manual = 0
@@ -282,14 +282,22 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
             total_out_manual += nominal
             report_rows.append({
                 "Tanggal": p.get('tgl', ''),
-                "Keterangan": p.get('ket', ''),
-                "Jenis": "Pengeluaran Manual",
-                "Nominal": nominal
+                "Keterangan": f"{p.get('ket', '')} (mn)",
+                "Pemasukan": 0,
+                "Pengeluaran": nominal
             })
 
     total_out = total_out_manual + total_out_tim
     final_omset = omset_jadwal + total_in_lain
     nett = final_omset - total_out
+
+    def parse_tanggal(val):
+        try:
+            return datetime.strptime(val, "%d/%m/%Y")
+        except Exception:
+            return datetime.max
+
+    report_rows = sorted(report_rows, key=lambda x: (parse_tanggal(x["Tanggal"]), x["Keterangan"]))
 
     return {
         "list_pemasukan_jadwal": list_pemasukan_jadwal,
@@ -329,7 +337,7 @@ def make_finance_excel(df, summary_dict):
 
             for row in ws.iter_rows(min_row=2):
                 for cell in row:
-                    if isinstance(cell.value, (int, float)) and cell.column != 1:
+                    if isinstance(cell.value, (int, float)) and cell.column in (3, 4):
                         cell.number_format = '"Rp" #,##0'
     output.seek(0)
     return output
@@ -382,16 +390,16 @@ def make_finance_pdf(df, summary_dict, title):
     ]))
     elements.extend([summary_tbl, Spacer(1, 14), Paragraph("Rincian Transaksi", label_style), Spacer(1, 6)])
 
-    table_data = [["Tanggal", "Keterangan", "Jenis", "Nominal"]]
+    table_data = [["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"]]
     for _, row in df.iterrows():
         table_data.append([
             str(row["Tanggal"]),
             str(row["Keterangan"]),
-            str(row["Jenis"]),
-            format_rupiah(row["Nominal"])
+            format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-",
+            format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-"
         ])
 
-    tbl = Table(table_data, colWidths=[58, 220, 100, 95], repeatRows=1)
+    tbl = Table(table_data, colWidths=[58, 220, 95, 100], repeatRows=1)
     table_style = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D96C92")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -400,7 +408,7 @@ def make_finance_pdf(df, summary_dict, title):
         ("LEADING", (0, 0), (-1, -1), 11),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E7B6C4")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (3, 1), (3, -1), "RIGHT"),
+        ("ALIGN", (2, 1), (3, -1), "RIGHT"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
@@ -429,7 +437,10 @@ if not st.session_state.auth:
     st.stop()
 
 # --- MENU SIDEBAR ---
-menu = st.sidebar.radio("MENU", ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"])
+menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
+default_menu = st.session_state.pop("menu_override", "BERANDA")
+default_index = menu_list.index(default_menu) if default_menu in menu_list else 0
+menu = st.sidebar.radio("MENU", menu_list, index=default_index)
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
@@ -884,16 +895,16 @@ elif menu == "KEUANGAN":
 
     st.divider()
     st.subheader("📥 Download Laporan")
+    st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
-        laporan_df = laporan_df.sort_values(by=["Tanggal", "Jenis", "Keterangan"]).reset_index(drop=True)
         st.dataframe(laporan_df, use_container_width=True)
 
         report_title = f"Laporan Keuangan {sel_month}/{sel_year}"
         excel_buffer = make_finance_excel(laporan_df, finance_data)
         pdf_buffer = make_finance_pdf(laporan_df, finance_data, report_title)
 
-        d1, d2 = st.columns(2)
+        d1, d2, d3 = st.columns(3)
         d1.download_button(
             "📊 Download Excel",
             data=excel_buffer,
@@ -906,6 +917,9 @@ elif menu == "KEUANGAN":
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
             mime="application/pdf"
         )
+        if d3.button("⬅️ Kembali ke Admin"):
+            st.session_state.menu_override = "BERANDA"
+            st.rerun()
     else:
         st.info("Belum ada data laporan untuk bulan ini.")
 
