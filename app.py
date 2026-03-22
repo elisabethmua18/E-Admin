@@ -521,7 +521,35 @@ menu = st.sidebar.radio("MENU", menu_list, index=default_index)
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
-    selected_date = st.date_input("Pilih Tanggal", value=date(2026, 3, 17))
+    today = date.today()
+
+    cal_col1, cal_col2 = st.columns(2)
+    current_month = int(st.session_state.get("beranda_cal_month", today.month))
+    current_year = int(st.session_state.get("beranda_cal_year", today.year))
+    selected_month_name = cal_col1.selectbox(
+        "Bulan Kalender",
+        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        index=current_month - 1,
+        key="beranda_month_name"
+    )
+    selected_year = cal_col2.selectbox(
+        "Tahun Kalender",
+        list(range(today.year - 2, today.year + 6)),
+        index=list(range(today.year - 2, today.year + 6)).index(current_year) if current_year in list(range(today.year - 2, today.year + 6)) else 2,
+        key="beranda_year_val"
+    )
+    month_lookup = {
+        "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+        "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+    }
+    selected_month = month_lookup[selected_month_name]
+    st.session_state["beranda_cal_month"] = selected_month
+    st.session_state["beranda_cal_year"] = selected_year
+
+    calendar_html, _ = render_month_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year)
+    components.html(calendar_html, height=430, scrolling=False)
+
+    selected_date = st.date_input("Pilih Tanggal", value=today)
     st.divider()
     
     selected_str = selected_date.strftime("%d/%m/%Y")
@@ -1024,6 +1052,40 @@ elif menu == "HAPUS DATA":
     st.header("🗑️ Hapus Data")
     st.warning("Hapus data dilakukan permanen. Pastikan data yang dipilih memang benar.")
 
+    st.subheader("📅 Kalender Jadwal Realtime")
+    today = date.today()
+    del_col1, del_col2 = st.columns(2)
+    delete_current_month = int(st.session_state.get("hapus_cal_month", today.month))
+    delete_current_year = int(st.session_state.get("hapus_cal_year", today.year))
+    delete_month_name = del_col1.selectbox(
+        "Bulan Kalender Realtime",
+        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        index=delete_current_month - 1,
+        key="hapus_month_name"
+    )
+    delete_year_options = list(range(today.year - 2, today.year + 6))
+    delete_year = del_col2.selectbox(
+        "Tahun Kalender Realtime",
+        delete_year_options,
+        index=delete_year_options.index(delete_current_year) if delete_current_year in delete_year_options else 2,
+        key="hapus_year_val"
+    )
+    month_lookup = {
+        "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
+        "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+    }
+    delete_month = month_lookup[delete_month_name]
+    st.session_state["hapus_cal_month"] = delete_month
+    st.session_state["hapus_cal_year"] = delete_year
+    delete_calendar_html, delete_booked_days = render_month_calendar(st.session_state.db.get('bookings', []), delete_month, delete_year)
+    components.html(delete_calendar_html, height=430, scrolling=False)
+    if delete_booked_days:
+        total_jobs = sum(len(v) for v in delete_booked_days.values())
+        st.caption(f"Tanggal warna biru menandakan ada jadwal. Total job bulan ini: {total_jobs}")
+    else:
+        st.caption("Belum ada jadwal pada bulan ini. Semua tanggal tampil normal.")
+
+    st.divider()
     tab_booking, tab_pemasukan, tab_pengeluaran = st.tabs(["JADWAL / KLIEN", "PEMASUKAN LAIN", "PENGELUARAN MANUAL"])
 
     with tab_booking:
