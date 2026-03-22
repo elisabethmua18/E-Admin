@@ -5,35 +5,6 @@ import os
 import requests
 import base64
 import pandas as pd
-import base64
-def save_data():
-
-    json_content = json.dumps(st.session_state.db, indent=4)
-    encoded_content = base64.b64encode(json_content.encode()).decode()
-
-    url = url = "https://api.github.com/repos/elisabethmua18/E-Admin/contents/mua_master_pro.json"
-    headers = {
-        "Authorization": f"token {st.secrets['GITHUB_TOKEN']}",
-        "Accept": "application/vnd.github+json"
-    }
-
-    # ambil SHA file lama
-    r = requests.get(url, headers=headers)
-
-    if r.status_code == 200:
-        sha = r.json()["sha"]
-    else:
-        sha = None
-
-    data = {
-        "message": "Auto update database dari aplikasi",
-        "content": encoded_content
-    }
-
-    if sha:
-        data["sha"] = sha
-
-    requests.put(url, headers=headers, json=data)
 from datetime import datetime, time, date
 
 # --- CONFIG HALAMAN ---
@@ -47,8 +18,8 @@ st.markdown("""
         background-color: #F19CBB; color: white;
         border-radius: 10px; font-weight: bold; width: 100%;
     }
-    .job-card { 
-        background-color: white; padding: 20px; border-radius: 15px; 
+    .job-card {
+        background-color: white; padding: 20px; border-radius: 15px;
         margin-bottom: 15px; border-left: 10px solid #F19CBB; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
     }
     .faktur-box {
@@ -66,35 +37,158 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- SISTEM DATABASE ---
+# --- SISTEM DATABASE PERSISTEN ---
 DATA_FILE = "mua_master_pro.json"
+GITHUB_REPO = "elisabethmua18/E-Admin"
+GITHUB_PATH = DATA_FILE
+GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}"
+GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_PATH}"
 
-def load_data():
+
+def get_default_data():
     initial_bookings = [
         {"inv_no": "INV0005", "nama": "Kak Angel", "tgl": "17/03/2026", "wa": "0857xxxx", "alamat_mu": "Tembalang", "jam_ready": "14:00-16:00", "jam_otw": "16:15", "durasi_otw": 15, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Selly", "dp": 0, "status": "PENDING"},
         {"inv_no": "INV0006", "nama": "Kak Reyki", "tgl": "17/03/2026", "wa": "0812xxxx", "alamat_mu": "Hotel Aruman", "jam_ready": "13:00-15:00", "jam_otw": "12:15", "durasi_otw": 30, "paket_list": [], "manual_list": [], "hire_tim": True, "tim_type": "Hairdo", "tim_nama": "Ovie", "dp": 0, "status": "PENDING"}
     ]
-    defaults = {
-        "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": ""},
+    return {
+        "profile": {"nama": "Elisabeth MUA", "alamat": "", "hp": "", "ig": "", "bank": "", "no_rek": "", "an": "", "logo_base64": "", "logo": ""},
         "faktur_settings": {"tnc": "", "signature": "", "salam": "", "next_inv": 7},
-        "master_layanan": {}, "bookings": initial_bookings, "pengeluaran": [], "pemasukan_lain": []
+        "master_layanan": {},
+        "bookings": initial_bookings,
+        "pengeluaran": [],
+        "pemasukan_lain": []
     }
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r") as f:
-                data = json.load(f)
-                for key in defaults:
-                    if key not in data: data[key] = defaults[key]
-                return data
-        except: return defaults
-    return defaults
+
+
+def merge_defaults(data: dict) -> dict:
+    defaults = get_default_data()
+    if not isinstance(data, dict):
+        return defaults
+
+    for key, value in defaults.items():
+        if key not in data:
+            data[key] = value
+
+    profile_defaults = defaults["profile"]
+    for key, value in profile_defaults.items():
+        if key not in data["profile"]:
+            data["profile"][key] = value
+
+    faktur_defaults = defaults["faktur_settings"]
+    for key, value in faktur_defaults.items():
+        if key not in data["faktur_settings"]:
+            data["faktur_settings"][key] = value
+
+    if not isinstance(data.get("master_layanan"), dict):
+        data["master_layanan"] = {}
+    for list_key in ["bookings", "pengeluaran", "pemasukan_lain"]:
+        if not isinstance(data.get(list_key), list):
+            data[list_key] = []
+
+    return data
+
+
+def get_github_headers():
+    token = st.secrets.get("GITHUB_TOKEN", "")
+    if not token:
+        return None
+    return {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+
+def load_data_from_github():
+    headers = get_github_headers()
+    if not headers:
+        return None
+
+    try:
+        response = requests.get(GITHUB_API_URL, headers=headers, timeout=20)
+        if response.status_code == 200:
+            payload = response.json()
+            content = payload.get("content", "")
+            if content:
+                decoded = base64.b64decode(content).decode("utf-8")
+                return merge_defaults(json.loads(decoded))
+
+        raw_response = requests.get(GITHUB_RAW_URL, timeout=20)
+        if raw_response.status_code == 200 and raw_response.text.strip():
+            return merge_defaults(raw_response.json())
+    except Exception as exc:
+        st.warning(f"Gagal membaca database online: {exc}")
+
+    return None
+
+
+def save_data_to_github(data):
+    headers = get_github_headers()
+    if not headers:
+        raise RuntimeError("GITHUB_TOKEN belum diisi di Streamlit secrets.")
+
+    json_content = json.dumps(data, ensure_ascii=False, indent=4)
+    encoded_content = base64.b64encode(json_content.encode("utf-8")).decode("utf-8")
+
+    sha = None
+    existing = requests.get(GITHUB_API_URL, headers=headers, timeout=20)
+    if existing.status_code == 200:
+        sha = existing.json().get("sha")
+    elif existing.status_code not in (404,):
+        raise RuntimeError(f"Gagal mengambil SHA GitHub: {existing.status_code} - {existing.text}")
+
+    payload = {
+        "message": "Auto update database dari aplikasi",
+        "content": encoded_content,
+        "branch": "main"
+    }
+    if sha:
+        payload["sha"] = sha
+
+    response = requests.put(GITHUB_API_URL, headers=headers, json=payload, timeout=20)
+    if response.status_code not in (200, 201):
+        raise RuntimeError(f"Gagal menyimpan ke GitHub: {response.status_code} - {response.text}")
+
+
+
+def load_data_local():
+    if not os.path.exists(DATA_FILE):
+        return None
+
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return merge_defaults(json.load(f))
+    except Exception:
+        return None
+
+
+
+def save_data_local(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+
+def load_data():
+    data = load_data_from_github()
+    if data is not None:
+        save_data_local(data)
+        return data
+
+    data = load_data_local()
+    if data is not None:
+        return data
+
+    return get_default_data()
+
 
 if 'db' not in st.session_state:
     st.session_state.db = load_data()
 
+
+
 def save_data():
-    with open(DATA_FILE, "w") as f:
-        json.dump(st.session_state.db, f, indent=4)
+    save_data_local(st.session_state.db)
+    save_data_to_github(st.session_state.db)
 
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
