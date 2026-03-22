@@ -5,7 +5,14 @@ import os
 import requests
 import base64
 import pandas as pd
+from io import BytesIO
 from datetime import datetime, time, date
+from docx import Document
+from docx.shared import Inches
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 # --- CONFIG HALAMAN ---
 st.set_page_config(page_title="E-Admin MUA - Elisabeth", layout="centered")
@@ -192,6 +199,209 @@ if 'db' not in st.session_state:
 def save_data():
     save_data_local(st.session_state.db)
     save_data_to_github(st.session_state.db)
+
+
+def format_rupiah(nominal):
+    return f"Rp {float(nominal or 0):,.0f}"
+
+
+def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pengeluaran_manual):
+    report_rows = []
+    omset_jadwal = 0
+    list_pemasukan_jadwal = []
+    list_pengeluaran_tim = []
+    total_out_tim = 0
+
+    for j in bookings:
+        tgl_parts = j.get('tgl', '').split('/')
+        if len(tgl_parts) != 3 or tgl_parts[1] != sel_month or tgl_parts[2] != sel_year:
+            continue
+
+        total_klien = sum(float(p.get('price', 0)) * int(p.get('qty', 1)) for p in j.get('paket_list', [])) +                       sum(float(m.get('harga', 0)) * int(m.get('qty', 1)) for m in j.get('manual_list', []))
+        dp_klien = float(j.get('dp', 0) or 0)
+
+        if j.get('status') == "SELESAI (LUNAS)":
+            pelunasan = max(total_klien - dp_klien, 0)
+            if dp_klien > 0:
+                list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"DP: {j['nama']}", "nom": dp_klien})
+                report_rows.append({
+                    "Tanggal": j['tgl'],
+                    "Keterangan": f"DP: {j['nama']}",
+                    "Jenis": "Pemasukan Otomatis",
+                    "Nominal": dp_klien
+                })
+                omset_jadwal += dp_klien
+            if pelunasan > 0:
+                list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"Pelunasan: {j['nama']}", "nom": pelunasan})
+                report_rows.append({
+                    "Tanggal": j['tgl'],
+                    "Keterangan": f"Pelunasan: {j['nama']}",
+                    "Jenis": "Pemasukan Otomatis",
+                    "Nominal": pelunasan
+                })
+                omset_jadwal += pelunasan
+        else:
+            if dp_klien > 0:
+                list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"DP: {j['nama']}", "nom": dp_klien})
+                report_rows.append({
+                    "Tanggal": j['tgl'],
+                    "Keterangan": f"DP: {j['nama']}",
+                    "Jenis": "Pemasukan Otomatis",
+                    "Nominal": dp_klien
+                })
+                omset_jadwal += dp_klien
+
+        fee_tim = float(j.get('fee_tim_tambahan', 0) or 0)
+        if fee_tim > 0:
+            ket_fee = f"Fee Tim: {j['nama']} - {j.get('tim_nama', '-')}"
+            list_pengeluaran_tim.append({"tgl": j['tgl'], "ket": ket_fee, "nom": fee_tim})
+            report_rows.append({
+                "Tanggal": j['tgl'],
+                "Keterangan": ket_fee,
+                "Jenis": "Pengeluaran Otomatis",
+                "Nominal": fee_tim
+            })
+            total_out_tim += fee_tim
+
+    total_in_lain = 0
+    for p in pemasukan_lain:
+        parts = p.get('tgl', '').split('/')
+        if len(parts) == 3 and parts[1] == sel_month and parts[2] == sel_year:
+            nominal = float(p.get('nom', 0) or 0)
+            total_in_lain += nominal
+            report_rows.append({
+                "Tanggal": p.get('tgl', ''),
+                "Keterangan": p.get('ket', ''),
+                "Jenis": "Pemasukan Lain",
+                "Nominal": nominal
+            })
+
+    total_out_manual = 0
+    for p in pengeluaran_manual:
+        parts = p.get('tgl', '').split('/')
+        if len(parts) == 3 and parts[1] == sel_month and parts[2] == sel_year:
+            nominal = float(p.get('nom', 0) or 0)
+            total_out_manual += nominal
+            report_rows.append({
+                "Tanggal": p.get('tgl', ''),
+                "Keterangan": p.get('ket', ''),
+                "Jenis": "Pengeluaran Manual",
+                "Nominal": nominal
+            })
+
+    total_out = total_out_manual + total_out_tim
+    final_omset = omset_jadwal + total_in_lain
+    nett = final_omset - total_out
+
+    return {
+        "list_pemasukan_jadwal": list_pemasukan_jadwal,
+        "omset_jadwal": omset_jadwal,
+        "list_pengeluaran_tim": list_pengeluaran_tim,
+        "total_out_tim": total_out_tim,
+        "total_in_lain": total_in_lain,
+        "total_out_manual": total_out_manual,
+        "total_out": total_out,
+        "final_omset": final_omset,
+        "nett": nett,
+        "report_rows": report_rows
+    }
+
+
+def make_finance_excel(df, summary_dict):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Transaksi")
+        pd.DataFrame([
+            {"Keterangan": "Omset (Bruto)", "Nominal": summary_dict["final_omset"]},
+            {"Keterangan": "Pengeluaran", "Nominal": summary_dict["total_out"]},
+            {"Keterangan": "Nett (Bersih)", "Nominal": summary_dict["nett"]},
+        ]).to_excel(writer, index=False, sheet_name="Ringkasan")
+
+        wb = writer.book
+        for ws in wb.worksheets:
+            for col in ws.columns:
+                max_length = 0
+                col_letter = col[0].column_letter
+                for cell in col:
+                    val = "" if cell.value is None else str(cell.value)
+                    max_length = max(max_length, len(val))
+                    if cell.row == 1:
+                        cell.font = cell.font.copy(bold=True)
+                ws.column_dimensions[col_letter].width = min(max_length + 3, 35)
+
+            for row in ws.iter_rows(min_row=2):
+                for cell in row:
+                    if isinstance(cell.value, (int, float)) and cell.column != 1:
+                        cell.number_format = '"Rp" #,##0'
+    output.seek(0)
+    return output
+
+
+def make_finance_docx(df, summary_dict, title):
+    output = BytesIO()
+    doc = Document()
+    doc.add_heading(title, level=1)
+    doc.add_paragraph(f"Omset (Bruto): {format_rupiah(summary_dict['final_omset'])}")
+    doc.add_paragraph(f"Pengeluaran: {format_rupiah(summary_dict['total_out'])}")
+    doc.add_paragraph(f"Nett (Bersih): {format_rupiah(summary_dict['nett'])}")
+    doc.add_paragraph("")
+
+    table = doc.add_table(rows=1, cols=4)
+    table.style = "Table Grid"
+    hdr = table.rows[0].cells
+    hdr[0].text = "Tanggal"
+    hdr[1].text = "Keterangan"
+    hdr[2].text = "Jenis"
+    hdr[3].text = "Nominal"
+
+    for _, row in df.iterrows():
+        cells = table.add_row().cells
+        cells[0].text = str(row["Tanggal"])
+        cells[1].text = str(row["Keterangan"])
+        cells[2].text = str(row["Jenis"])
+        cells[3].text = format_rupiah(row["Nominal"])
+
+    doc.save(output)
+    output.seek(0)
+    return output
+
+
+def make_finance_pdf(df, summary_dict, title):
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
+    styles = getSampleStyleSheet()
+    elements = [
+        Paragraph(title, styles["Title"]),
+        Spacer(1, 8),
+        Paragraph(f"Omset (Bruto): {format_rupiah(summary_dict['final_omset'])}", styles["Normal"]),
+        Paragraph(f"Pengeluaran: {format_rupiah(summary_dict['total_out'])}", styles["Normal"]),
+        Paragraph(f"Nett (Bersih): {format_rupiah(summary_dict['nett'])}", styles["Normal"]),
+        Spacer(1, 12),
+    ]
+
+    table_data = [["Tanggal", "Keterangan", "Jenis", "Nominal"]]
+    for _, row in df.iterrows():
+        table_data.append([
+            str(row["Tanggal"]),
+            str(row["Keterangan"]),
+            str(row["Jenis"]),
+            format_rupiah(row["Nominal"])
+        ])
+
+    tbl = Table(table_data, colWidths=[65, 210, 100, 90])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F19CBB")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D9A5B3")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
+        ("ALIGN", (3, 1), (3, -1), "RIGHT"),
+    ]))
+    elements.append(tbl)
+    doc.build(elements)
+    output.seek(0)
+    return output
 
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
@@ -586,32 +796,30 @@ elif menu == "PROFIL & SETTING":
             # --- 5. KEUANGAN ---
 elif menu == "KEUANGAN":
     st.header("💰 Laporan Keuangan Bulanan")
-    
-    # Filter Bulan dan Tahun
+
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
     sel_year = c2.selectbox("Pilih Tahun", ["2025","2026","2027"], index=1)
-    
-    # 1. PERHITUNGAN OTOMATIS DARI JADWAL (DP & PELUNASAN)
-    omset_jadwal = 0
+
+    finance_data = build_finance_report_rows(
+        sel_month,
+        sel_year,
+        st.session_state.db.get('bookings', []),
+        st.session_state.db.get('pemasukan_lain', []),
+        st.session_state.db.get('pengeluaran', [])
+    )
+
+    list_pemasukan_jadwal = finance_data["list_pemasukan_jadwal"]
+    omset_jadwal = finance_data["omset_jadwal"]
+    list_pengeluaran_tim = finance_data["list_pengeluaran_tim"]
+    total_out_tim = finance_data["total_out_tim"]
+    total_in_lain = finance_data["total_in_lain"]
+    total_out_manual = finance_data["total_out_manual"]
+    total_out = finance_data["total_out"]
+    final_omset = finance_data["final_omset"]
+    nett = finance_data["nett"]
+
     st.subheader("📊 Pemasukan Otomatis (Jadwal)")
-    
-    list_pemasukan_jadwal = []
-    for j in st.session_state.db['bookings']:
-        tgl_parts = j.get('tgl','').split('/')
-        if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year:
-            # Jika status SELESAI, maka Omset = Full Payment
-            if j.get('status') == "SELESAI (LUNAS)":
-                total_klien = sum([float(p['price'])*int(p['qty']) for p in j['paket_list']]) + sum([float(m['harga'])*int(m['qty']) for m in j['manual_list']])
-                list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"Lunas: {j['nama']}", "nom": total_klien})
-                omset_jadwal += total_klien
-            # Jika masih PENDING, ambil DP-nya saja sebagai pemasukan masuk
-            else:
-                dp_klien = float(j.get('dp', 0))
-                if dp_klien > 0:
-                    list_pemasukan_jadwal.append({"tgl": j['tgl'], "ket": f"DP: {j['nama']}", "nom": dp_klien})
-                    omset_jadwal += dp_klien
-    
     if list_pemasukan_jadwal:
         st.table(pd.DataFrame(list_pemasukan_jadwal))
     else:
@@ -619,21 +827,7 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    # 2. PENGELUARAN OTOMATIS DARI FEE TIM TAMBAHAN
     st.subheader("🤝 Pengeluaran Otomatis (Fee Tim Tambahan)")
-    list_pengeluaran_tim = []
-    total_out_tim = 0
-    for j in st.session_state.db['bookings']:
-        tgl_parts = j.get('tgl','').split('/')
-        fee_tim = float(j.get('fee_tim_tambahan', 0) or 0)
-        if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year and fee_tim > 0:
-            list_pengeluaran_tim.append({
-                "tgl": j['tgl'],
-                "ket": f"Fee Tim: {j['nama']} - {j.get('tim_nama','-')}",
-                "nom": fee_tim
-            })
-            total_out_tim += fee_tim
-
     if list_pengeluaran_tim:
         st.table(pd.DataFrame(list_pengeluaran_tim))
     else:
@@ -641,9 +835,8 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    # 3. PEMASUKAN LAIN & PENGELUARAN (MANUAL)
     col_in, col_out = st.columns(2)
-    
+
     with col_in:
         st.subheader("➕ Penghasilan Lain")
         with st.form("pemasukan_lain_form"):
@@ -651,12 +844,12 @@ elif menu == "KEUANGAN":
             nom_in = st.number_input("Nominal (Rp)", min_value=0)
             if st.form_submit_button("Simpan Pemasukan"):
                 st.session_state.db['pemasukan_lain'].append({
-                    "tgl": date.today().strftime("%d/%m/%Y"), 
-                    "ket": ket_in, 
+                    "tgl": date.today().strftime("%d/%m/%Y"),
+                    "ket": ket_in,
                     "nom": nom_in
                 })
                 save_data(); st.rerun()
-    
+
     with col_out:
         st.subheader("💸 Pengeluaran")
         with st.form("pengeluaran_form"):
@@ -664,44 +857,63 @@ elif menu == "KEUANGAN":
             nom_out = st.number_input("Nominal (Rp)", min_value=0)
             if st.form_submit_button("Simpan Pengeluaran"):
                 st.session_state.db['pengeluaran'].append({
-                    "tgl": date.today().strftime("%d/%m/%Y"), 
-                    "ket": ket_out, 
+                    "tgl": date.today().strftime("%d/%m/%Y"),
+                    "ket": ket_out,
                     "nom": nom_out
                 })
                 save_data(); st.rerun()
 
-    # Hitung Total Manual
-    total_in_lain = sum([float(p['nom']) for p in st.session_state.db.get('pemasukan_lain', []) if p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year])
-    total_out_manual = sum([
-            float(p.get('nom', 0)) 
-            for p in st.session_state.db.get('pengeluaran', []) 
-            if 'tgl' in p and len(p['tgl'].split('/')) > 2 and p['tgl'].split('/')[1] == sel_month and p['tgl'].split('/')[2] == sel_year
-        ])
-    total_out = total_out_manual + total_out_tim
-    
-    # 4. RINGKASAN AKHIR
     st.divider()
-    final_omset = omset_jadwal + total_in_lain
     res1, res2, res3 = st.columns(3)
-    
-    res1.metric("OMSET (Bruto)", f"Rp {final_omset:,.0f}")
-    res2.metric("PENGELUARAN", f"Rp {total_out:,.0f}")
-    res3.metric("NETT (Bersih)", f"Rp {final_omset - total_out:,.0f}")
+    res1.metric("OMSET (Bruto)", format_rupiah(final_omset))
+    res2.metric("PENGELUARAN", format_rupiah(total_out))
+    res3.metric("NETT (Bersih)", format_rupiah(nett))
 
-    # Tampilkan Detail Jika Ada
+    st.divider()
+    st.subheader("📥 Download Laporan")
+    laporan_df = pd.DataFrame(finance_data["report_rows"])
+    if not laporan_df.empty:
+        laporan_df = laporan_df.sort_values(by=["Tanggal", "Jenis", "Keterangan"]).reset_index(drop=True)
+        st.dataframe(laporan_df, use_container_width=True)
+
+        report_title = f"Laporan Keuangan {sel_month}/{sel_year}"
+        excel_buffer = make_finance_excel(laporan_df, finance_data)
+        docx_buffer = make_finance_docx(laporan_df, finance_data, report_title)
+        pdf_buffer = make_finance_pdf(laporan_df, finance_data, report_title)
+
+        d1, d2, d3 = st.columns(3)
+        d1.download_button(
+            "📊 Download Excel",
+            data=excel_buffer,
+            file_name=f"laporan_keuangan_{sel_month}_{sel_year}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        d2.download_button(
+            "📝 Download Word",
+            data=docx_buffer,
+            file_name=f"laporan_keuangan_{sel_month}_{sel_year}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        d3.download_button(
+            "📄 Download PDF",
+            data=pdf_buffer,
+            file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
+            mime="application/pdf"
+        )
+    else:
+        st.info("Belum ada data laporan untuk bulan ini.")
+
     if total_in_lain > 0 or total_out > 0:
         with st.expander("Lihat Rincian Manual Bulan Ini"):
             if total_in_lain > 0:
                 st.write("**Pemasukan Tambahan:**")
-                st.json([p for p in st.session_state.db['pemasukan_lain'] if p['tgl'].split('/')[1] == sel_month])
+                st.json([p for p in st.session_state.db['pemasukan_lain'] if p.get('tgl', '').split('/')[1] == sel_month and p.get('tgl', '').split('/')[2] == sel_year])
             if total_out_tim > 0:
                 st.write("**Pengeluaran Otomatis Fee Tim:**")
                 st.json(list_pengeluaran_tim)
             if total_out_manual > 0:
                 st.write("**Pengeluaran Manual:**")
-                st.json([p for p in st.session_state.db['pengeluaran'] if p['tgl'].split('/')[1] == sel_month])
-                
-
+                st.json([p for p in st.session_state.db['pengeluaran'] if p.get('tgl', '').split('/')[1] == sel_month and p.get('tgl', '').split('/')[2] == sel_year])
 
 # --- 6. HAPUS DATA ---
 elif menu == "HAPUS DATA":
