@@ -83,6 +83,11 @@
                     "nama": "Bulumata",
                     "harga": 25000,
                     "qty": 1
+                },
+                {
+                    "nama": "Ongkir (diskon 10K)",
+                    "harga": 15000,
+                    "qty": 1
                 }
             ],
             "hire_tim": false,
