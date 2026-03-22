@@ -213,7 +213,8 @@ def format_rupiah(nominal):
 
 
 
-def display_clickable_calendar(bookings, month, year, key_prefix="main"):
+
+def display_clickable_calendar(bookings, month, year, key_prefix="main", clickable=True, show_picker=True):
     cal = calendar.Calendar(firstweekday=0)
     booked_days = {}
     for b in bookings:
@@ -227,49 +228,90 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main"):
     month_name = MONTH_NAMES_ID[month - 1]
     day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
-    st.markdown(
-        f"""
-        <div style="background:white;padding:10px;border-radius:14px;box-shadow:2px 2px 10px rgba(0,0,0,0.08);margin-bottom:10px;">
-            <div style="font-weight:700;color:#C85A7C;font-size:16px;margin-bottom:8px;text-align:center;">
-                Kalender Jadwal {month_name} {year}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    weeks = cal.monthdayscalendar(year, month)
+    rows_html = []
+    today_val = date.today()
+    for week in weeks:
+        cells = []
+        for day in week:
+            if day == 0:
+                cells.append("<td style='padding:2px;height:34px;'></td>")
+                continue
+
+            items = booked_days.get(day, [])
+            is_today = today_val.year == year and today_val.month == month and today_val.day == day
+
+            bg = "#4A90E2" if items else "#FFFFFF"
+            text_color = "#FFFFFF" if items else "#333333"
+            border = "2px solid #44B86A" if is_today else "1px solid #EBC2D0"
+            label = f"{day}"
+            if items:
+                label = f"{day}<div style='font-size:8px;line-height:1;margin-top:1px;'>•</div>"
+
+            cells.append(
+                f"""
+                <td style="padding:2px; width:14.28%;">
+                    <div style="
+                        min-height:34px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        flex-direction:column;
+                        border-radius:8px;
+                        background:{bg};
+                        color:{text_color};
+                        border:{border};
+                        font-size:12px;
+                        font-weight:700;
+                    ">{label}</div>
+                </td>
+                """
+            )
+        rows_html.append("<tr>" + "".join(cells) + "</tr>")
+
+    header_html = "".join(
+        f"<th style='padding:4px 2px;font-size:10px;color:#8A4D62;font-weight:700;text-align:center;'>{d}</th>"
+        for d in day_names
     )
 
-    header_cols = st.columns(7, gap="small")
-    for col, day_name in zip(header_cols, day_names):
-        col.markdown(
-            f"<div style='text-align:center;font-size:11px;font-weight:700;color:#8A4D62;margin-bottom:2px;'>{day_name}</div>",
-            unsafe_allow_html=True
-        )
+    calendar_html = f"""
+    <div style="background:white;padding:10px;border-radius:14px;box-shadow:2px 2px 10px rgba(0,0,0,0.08);margin-bottom:10px;">
+        <div style="font-weight:700;color:#C85A7C;font-size:16px;margin-bottom:8px;text-align:center;">
+            Kalender Jadwal {month_name} {year}
+        </div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0 3px;table-layout:fixed;">
+            <thead>
+                <tr>{header_html}</tr>
+            </thead>
+            <tbody>
+                {''.join(rows_html)}
+            </tbody>
+        </table>
+    </div>
+    """
+    st.markdown(calendar_html, unsafe_allow_html=True)
 
-    for week in cal.monthdayscalendar(year, month):
-        cols = st.columns(7, gap="small")
-        for i, day in enumerate(week):
-            with cols[i]:
-                if day == 0:
-                    st.markdown("<div style='height:34px;'></div>", unsafe_allow_html=True)
-                else:
-                    items = booked_days.get(day, [])
-                    if items:
-                        if st.button(str(day), key=f"{key_prefix}_{year}_{month}_{day}", type="primary", use_container_width=True):
-                            st.session_state["selected_date_override"] = date(year, month, day)
-                            st.session_state["menu_override"] = "BERANDA"
-                            st.rerun()
-                    else:
-                        st.markdown(
-                            f"""
-                            <div style="
-                                height:38px; display:flex; align-items:center; justify-content:center;
-                                border-radius:10px; background:#FFF9FB; border:1px solid #F0D5E0;
-                                color:#333; font-size:12px; font-weight:700;">
-                                {day}
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+    if clickable and show_picker:
+        if booked_days:
+            st.caption("Tanggal biru menandakan ada jadwal. Ketuk tombol tanggal di bawah untuk membuka jadwal hari itu.")
+            sorted_days = sorted(booked_days.keys())
+            for day in sorted_days:
+                items = booked_days[day]
+                names = ", ".join(x.get("nama", "-") for x in items[:2])
+                if len(items) > 2:
+                    names += f" +{len(items)-2} lagi"
+                label = f"{day:02d} {month_name[:3]} • {names}"
+                if st.button(label, key=f"{key_prefix}_pick_{year}_{month}_{day}", use_container_width=True):
+                    st.session_state["selected_date_override"] = date(year, month, day)
+                    st.session_state["menu_override"] = "BERANDA"
+                    st.rerun()
+        else:
+            st.caption("Belum ada schedule pada bulan ini.")
+    elif booked_days:
+        total_jobs = sum(len(v) for v in booked_days.values())
+        st.caption(f"Tanggal warna biru menandakan ada jadwal. Total job bulan ini: {total_jobs}")
+    else:
+        st.caption("Belum ada jadwal pada bulan ini. Semua tanggal tampil normal.")
 
     return booked_days
 
@@ -1098,20 +1140,17 @@ elif menu == "HAPUS DATA":
         index=delete_year_options.index(delete_current_year) if delete_current_year in delete_year_options else 2,
         key="hapus_year_val"
     )
-    month_lookup = {
-        "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
-        "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
-    }
-    delete_month = month_lookup[delete_month_name]
+    delete_month = MONTH_LOOKUP_ID[delete_month_name]
     st.session_state["hapus_cal_month"] = delete_month
     st.session_state["hapus_cal_year"] = delete_year
-    delete_calendar_html, delete_booked_days = render_month_calendar(st.session_state.db.get('bookings', []), delete_month, delete_year)
-    components.html(delete_calendar_html, height=430, scrolling=False)
-    if delete_booked_days:
-        total_jobs = sum(len(v) for v in delete_booked_days.values())
-        st.caption(f"Tanggal warna biru menandakan ada jadwal. Total job bulan ini: {total_jobs}")
-    else:
-        st.caption("Belum ada jadwal pada bulan ini. Semua tanggal tampil normal.")
+    display_clickable_calendar(
+        st.session_state.db.get('bookings', []),
+        delete_month,
+        delete_year,
+        key_prefix="hapus",
+        clickable=False,
+        show_picker=False
+    )
 
     st.divider()
     tab_booking, tab_pemasukan, tab_pengeluaran = st.tabs(["JADWAL / KLIEN", "PEMASUKAN LAIN", "PENGELUARAN MANUAL"])
