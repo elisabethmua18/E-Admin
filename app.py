@@ -7,8 +7,6 @@ import base64
 import pandas as pd
 from io import BytesIO
 from datetime import datetime, time, date
-from docx import Document
-from docx.shared import Inches
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -337,47 +335,52 @@ def make_finance_excel(df, summary_dict):
     return output
 
 
-def make_finance_docx(df, summary_dict, title):
-    output = BytesIO()
-    doc = Document()
-    doc.add_heading(title, level=1)
-    doc.add_paragraph(f"Omset (Bruto): {format_rupiah(summary_dict['final_omset'])}")
-    doc.add_paragraph(f"Pengeluaran: {format_rupiah(summary_dict['total_out'])}")
-    doc.add_paragraph(f"Nett (Bersih): {format_rupiah(summary_dict['nett'])}")
-    doc.add_paragraph("")
-
-    table = doc.add_table(rows=1, cols=4)
-    table.style = "Table Grid"
-    hdr = table.rows[0].cells
-    hdr[0].text = "Tanggal"
-    hdr[1].text = "Keterangan"
-    hdr[2].text = "Jenis"
-    hdr[3].text = "Nominal"
-
-    for _, row in df.iterrows():
-        cells = table.add_row().cells
-        cells[0].text = str(row["Tanggal"])
-        cells[1].text = str(row["Keterangan"])
-        cells[2].text = str(row["Jenis"])
-        cells[3].text = format_rupiah(row["Nominal"])
-
-    doc.save(output)
-    output.seek(0)
-    return output
-
 
 def make_finance_pdf(df, summary_dict, title):
     output = BytesIO()
-    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=28, leftMargin=28, topMargin=28, bottomMargin=28)
     styles = getSampleStyleSheet()
+
+    title_style = styles["Title"].clone("pink_title")
+    title_style.textColor = colors.HexColor("#C85A7C")
+    title_style.fontSize = 18
+    title_style.leading = 22
+    title_style.spaceAfter = 8
+
+    subtitle_style = styles["Normal"].clone("subtitle")
+    subtitle_style.textColor = colors.HexColor("#666666")
+    subtitle_style.fontSize = 9
+    subtitle_style.leading = 12
+
+    label_style = styles["Normal"].clone("label")
+    label_style.fontSize = 10
+    label_style.leading = 13
+
     elements = [
-        Paragraph(title, styles["Title"]),
-        Spacer(1, 8),
-        Paragraph(f"Omset (Bruto): {format_rupiah(summary_dict['final_omset'])}", styles["Normal"]),
-        Paragraph(f"Pengeluaran: {format_rupiah(summary_dict['total_out'])}", styles["Normal"]),
-        Paragraph(f"Nett (Bersih): {format_rupiah(summary_dict['nett'])}", styles["Normal"]),
-        Spacer(1, 12),
+        Paragraph("Elisabeth MUA", title_style),
+        Paragraph(title, subtitle_style),
+        Spacer(1, 10),
     ]
+
+    summary_data = [
+        ["Ringkasan", "Nominal"],
+        ["Omset (Bruto)", format_rupiah(summary_dict['final_omset'])],
+        ["Pengeluaran", format_rupiah(summary_dict['total_out'])],
+        ["Nett (Bersih)", format_rupiah(summary_dict['nett'])],
+    ]
+    summary_tbl = Table(summary_data, colWidths=[250, 220])
+    summary_tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F19CBB")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("TOPPADDING", (0, 0), (-1, 0), 8),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#FFF7FA")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E7B6C4")),
+        ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+    ]))
+    elements.extend([summary_tbl, Spacer(1, 14), Paragraph("Rincian Transaksi", label_style), Spacer(1, 6)])
 
     table_data = [["Tanggal", "Keterangan", "Jenis", "Nominal"]]
     for _, row in df.iterrows():
@@ -388,16 +391,26 @@ def make_finance_pdf(df, summary_dict, title):
             format_rupiah(row["Nominal"])
         ])
 
-    tbl = Table(table_data, colWidths=[65, 210, 100, 90])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F19CBB")),
+    tbl = Table(table_data, colWidths=[58, 220, 100, 95], repeatRows=1)
+    table_style = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D96C92")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D9A5B3")),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("LEADING", (0, 0), (-1, -1), 11),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E7B6C4")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (3, 1), (3, -1), "RIGHT"),
-    ]))
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]
+    for i in range(1, len(table_data)):
+        bg = "#FFF7FA" if i % 2 == 1 else "#FFFFFF"
+        table_style.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor(bg)))
+    tbl.setStyle(TableStyle(table_style))
+
     elements.append(tbl)
     doc.build(elements)
     output.seek(0)
@@ -878,10 +891,9 @@ elif menu == "KEUANGAN":
 
         report_title = f"Laporan Keuangan {sel_month}/{sel_year}"
         excel_buffer = make_finance_excel(laporan_df, finance_data)
-        docx_buffer = make_finance_docx(laporan_df, finance_data, report_title)
         pdf_buffer = make_finance_pdf(laporan_df, finance_data, report_title)
 
-        d1, d2, d3 = st.columns(3)
+        d1, d2 = st.columns(2)
         d1.download_button(
             "📊 Download Excel",
             data=excel_buffer,
@@ -889,12 +901,6 @@ elif menu == "KEUANGAN":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         d2.download_button(
-            "📝 Download Word",
-            data=docx_buffer,
-            file_name=f"laporan_keuangan_{sel_month}_{sel_year}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-        d3.download_button(
             "📄 Download PDF",
             data=pdf_buffer,
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
