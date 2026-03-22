@@ -50,6 +50,9 @@ GITHUB_PATH = DATA_FILE
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}"
 GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_PATH}"
 
+MONTH_NAMES_ID = MONTH_NAMES_ID
+MONTH_LOOKUP_ID = {name: i + 1 for i, name in enumerate(MONTH_NAMES_ID)}
+
 
 def get_default_data():
     initial_bookings = [
@@ -204,7 +207,7 @@ def format_rupiah(nominal):
     return f"Rp {float(nominal or 0):,.0f}"
 
 
-def render_month_calendar(bookings, month, year):
+def render_month_calendar(bookings, month, year, target_menu="BERANDA", calendar_key="main"):
     cal = calendar.Calendar(firstweekday=0)
     booked_days = {}
     for b in bookings:
@@ -215,27 +218,23 @@ def render_month_calendar(bookings, month, year):
         except Exception:
             continue
 
-    month_name = {
-        1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni",
-        7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"
-    }[month]
+    month_name = MONTH_NAMES_ID[month - 1]
     day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
     html = """
     <style>
-    .calendar-wrap {background:white; padding:16px; border-radius:16px; box-shadow:2px 2px 10px rgba(0,0,0,0.08);}
-    .calendar-title {font-weight:bold; color:#C85A7C; font-size:22px; margin-bottom:12px;}
-    .calendar-table {width:100%; border-collapse:collapse; table-layout:fixed;}
-    .calendar-table th {background:#F8E6EE; color:#8A4D62; padding:10px 4px; border:1px solid #F0D5E0; font-size:13px;}
-    .calendar-table td {height:78px; vertical-align:top; border:1px solid #F0D5E0; padding:6px; background:#FFF9FB;}
-    .calendar-day {font-weight:bold; color:#333; font-size:14px; margin-bottom:4px;}
-    .calendar-empty {background:#FAFAFA;}
-    .calendar-has-job {background:#EAF3FF !important;}
-    .calendar-badge {display:inline-block; margin-top:4px; background:#2F80ED; color:white; padding:2px 6px; border-radius:999px; font-size:11px; font-weight:bold;}
-    .calendar-job {font-size:11px; color:#444; line-height:1.25; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .compact-calendar-wrap {background:white; padding:10px; border-radius:14px; box-shadow:2px 2px 10px rgba(0,0,0,0.08); margin-bottom:10px;}
+    .compact-calendar-title {font-weight:700; color:#C85A7C; font-size:16px; margin-bottom:8px; text-align:center;}
+    .compact-calendar-table {width:100%; border-collapse:separate; border-spacing:4px; table-layout:fixed;}
+    .compact-calendar-table th {font-size:11px; color:#8A4D62; padding:2px 0; font-weight:700;}
+    .compact-calendar-day {height:38px; border-radius:10px; background:#FFF9FB; border:1px solid #F0D5E0; text-align:center; vertical-align:middle; font-size:12px; font-weight:700; color:#333;}
+    .compact-calendar-empty {height:38px;}
+    .compact-calendar-link {display:flex; align-items:center; justify-content:center; width:100%; height:100%; text-decoration:none; color:#2F80ED; background:#EAF3FF; border-radius:10px; position:relative; font-weight:800;}
+    .compact-calendar-link::after {content:''; position:absolute; bottom:4px; width:6px; height:6px; background:#2F80ED; border-radius:50%;}
+    .compact-calendar-num {display:flex; align-items:center; justify-content:center; width:100%; height:100%;}
     </style>
     """
-    html += f'<div class="calendar-wrap"><div class="calendar-title">Kalender Jadwal {month_name} {year}</div><table class="calendar-table"><thead><tr>'
+    html += f'<div class="compact-calendar-wrap"><div class="compact-calendar-title">Kalender Jadwal {month_name} {year}</div><table class="compact-calendar-table"><thead><tr>'
     for d in day_names:
         html += f"<th>{d}</th>"
     html += "</tr></thead><tbody>"
@@ -244,18 +243,17 @@ def render_month_calendar(bookings, month, year):
         html += "<tr>"
         for day in week:
             if day == 0:
-                html += '<td class="calendar-empty"></td>'
+                html += '<td class="compact-calendar-empty"></td>'
             else:
                 items = booked_days.get(day, [])
-                extra_class = " calendar-has-job" if items else ""
-                html += f'<td class="{extra_class.strip()}"><div class="calendar-day">{day}</div>'
+                selected_iso = f"{year:04d}-{month:02d}-{day:02d}"
+                url = f"?menu={target_menu}&selected_date={selected_iso}&beranda_cal_month={month}&beranda_cal_year={year}&hapus_cal_month={month}&hapus_cal_year={year}&calendar_click={calendar_key}"
+                html += '<td class="compact-calendar-day">'
                 if items:
-                    html += f'<div class="calendar-badge">{len(items)} job</div>'
-                    for item in items[:2]:
-                        html += f'<div class="calendar-job">{item.get("jam_ready","")} • {item.get("nama","-")}</div>'
-                    if len(items) > 2:
-                        html += f'<div class="calendar-job">+{len(items)-2} lainnya</div>'
-                html += "</td>"
+                    html += f'<a class="compact-calendar-link" href="{url}">{day}</a>'
+                else:
+                    html += f'<div class="compact-calendar-num">{day}</div>'
+                html += '</td>'
         html += "</tr>"
     html += "</tbody></table></div>"
     return html, booked_days
@@ -513,6 +511,25 @@ if not st.session_state.auth:
         else: st.error("Akses Ditolak!")
     st.stop()
 
+# --- QUERY PARAM HANDLER ---
+query_params = st.query_params
+if query_params.get("menu") in ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]:
+    st.session_state["menu_override"] = query_params.get("menu")
+
+selected_date_param = query_params.get("selected_date")
+if selected_date_param:
+    try:
+        st.session_state["selected_date_override"] = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
+    except Exception:
+        pass
+
+for key in ["beranda_cal_month", "beranda_cal_year", "hapus_cal_month", "hapus_cal_year"]:
+    if query_params.get(key):
+        try:
+            st.session_state[key] = int(query_params.get(key))
+        except Exception:
+            pass
+
 # --- MENU SIDEBAR ---
 menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
 default_menu = st.session_state.pop("menu_override", "BERANDA")
@@ -528,7 +545,7 @@ if menu == "BERANDA":
     current_year = int(st.session_state.get("beranda_cal_year", today.year))
     selected_month_name = cal_col1.selectbox(
         "Bulan Kalender",
-        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        MONTH_NAMES_ID,
         index=current_month - 1,
         key="beranda_month_name"
     )
@@ -538,18 +555,15 @@ if menu == "BERANDA":
         index=list(range(today.year - 2, today.year + 6)).index(current_year) if current_year in list(range(today.year - 2, today.year + 6)) else 2,
         key="beranda_year_val"
     )
-    month_lookup = {
-        "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
-        "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
-    }
-    selected_month = month_lookup[selected_month_name]
+    selected_month = MONTH_LOOKUP_ID[selected_month_name]
     st.session_state["beranda_cal_month"] = selected_month
     st.session_state["beranda_cal_year"] = selected_year
 
-    calendar_html, _ = render_month_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year)
-    components.html(calendar_html, height=430, scrolling=False)
+    calendar_html, _ = render_month_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, target_menu="BERANDA", calendar_key="beranda")
+    components.html(calendar_html, height=260, scrolling=False)
 
-    selected_date = st.date_input("Pilih Tanggal", value=today)
+    selected_default = st.session_state.pop("selected_date_override", today)
+    selected_date = st.date_input("Pilih Tanggal", value=selected_default)
     st.divider()
     
     selected_str = selected_date.strftime("%d/%m/%Y")
@@ -1059,7 +1073,7 @@ elif menu == "HAPUS DATA":
     delete_current_year = int(st.session_state.get("hapus_cal_year", today.year))
     delete_month_name = del_col1.selectbox(
         "Bulan Kalender Realtime",
-        ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+        MONTH_NAMES_ID,
         index=delete_current_month - 1,
         key="hapus_month_name"
     )
