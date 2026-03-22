@@ -289,7 +289,7 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main", clickab
         </table>
     </div>
     """
-    st.markdown(calendar_html, unsafe_allow_html=True)
+    components.html(calendar_html, height=320, scrolling=False)
 
     if clickable and show_picker:
         if booked_days:
