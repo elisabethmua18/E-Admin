@@ -228,72 +228,93 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main", clickab
     month_name = MONTH_NAMES_ID[month - 1]
     day_names = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
-    st.markdown(
-        f"""
-        <div style="background:white;padding:14px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin:8px 0 14px 0;">
-            <div style="font-weight:700;color:#C85A7C;font-size:18px;text-align:center;margin-bottom:8px;">
-                Kalender Jadwal {month_name} {year}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    header_cols = st.columns(7, gap="small")
-    for idx, day_name in enumerate(day_names):
-        header_cols[idx].markdown(
-            f"<div style='text-align:center;font-weight:700;color:#8A4D62;font-size:12px;'>{day_name}</div>",
-            unsafe_allow_html=True
-        )
-
     weeks = cal.monthdayscalendar(year, month)
-    for week_idx, week in enumerate(weeks):
-        cols = st.columns(7, gap="small")
-        for day_idx, day in enumerate(week):
-            col = cols[day_idx]
+    rows_html = []
+    today_val = date.today()
+    for week in weeks:
+        cells = []
+        for day in week:
             if day == 0:
-                col.markdown("<div style='height:38px;'></div>", unsafe_allow_html=True)
+                cells.append("<td style='padding:2px;height:34px;'></td>")
                 continue
 
             items = booked_days.get(day, [])
-            is_booked = len(items) > 0
-            button_key = f"{key_prefix}_{year}_{month}_{week_idx}_{day_idx}_{day}"
+            is_today = today_val.year == year and today_val.month == month and today_val.day == day
 
-            if clickable and is_booked:
-                if col.button(f"{day}", key=button_key, use_container_width=True, type="primary"):
-                    st.session_state["selected_date_active"] = date(year, month, day)
-                    st.session_state["menu"] = "BERANDA"
-                    st.rerun()
-            else:
-                bg = "#4A90E2" if is_booked else "#FFFFFF"
-                fg = "#FFFFFF" if is_booked else "#333333"
-                border = "1px solid #D8A8B9"
-                col.markdown(
-                    f"""
+            bg = "#4A90E2" if items else "#FFFFFF"
+            text_color = "#FFFFFF" if items else "#333333"
+            border = "2px solid #44B86A" if is_today else "1px solid #EBC2D0"
+            label = f"{day}"
+            if items:
+                label = f"{day}<div style='font-size:8px;line-height:1;margin-top:1px;'>•</div>"
+
+            cells.append(
+                f"""
+                <td style="padding:2px; width:14.28%;">
                     <div style="
-                        min-height:38px;
+                        min-height:34px;
                         display:flex;
                         align-items:center;
                         justify-content:center;
-                        border-radius:12px;
+                        flex-direction:column;
+                        border-radius:8px;
                         background:{bg};
-                        color:{fg};
+                        color:{text_color};
                         border:{border};
+                        font-size:12px;
                         font-weight:700;
-                        font-size:15px;
-                        margin-top:2px;
-                    ">{day}</div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                    ">{label}</div>
+                </td>
+                """
+            )
+        rows_html.append("<tr>" + "".join(cells) + "</tr>")
 
-    if show_picker:
+    header_html = "".join(
+        f"<th style='padding:4px 2px;font-size:10px;color:#8A4D62;font-weight:700;text-align:center;'>{d}</th>"
+        for d in day_names
+    )
+
+    calendar_html = f"""
+    <div style="background:white;padding:10px;border-radius:14px;box-shadow:2px 2px 10px rgba(0,0,0,0.08);margin-bottom:10px;">
+        <div style="font-weight:700;color:#C85A7C;font-size:16px;margin-bottom:8px;text-align:center;">
+            Kalender Jadwal {month_name} {year}
+        </div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0 3px;table-layout:fixed;">
+            <thead>
+                <tr>{header_html}</tr>
+            </thead>
+            <tbody>
+                {''.join(rows_html)}
+            </tbody>
+        </table>
+    </div>
+    """
+    components.html(calendar_html, height=320, scrolling=False)
+
+    if clickable and show_picker:
         if booked_days:
-            st.caption("Tanggal biru menandakan ada jadwal. Ketuk tanggal biru untuk membuka jadwal hari itu.")
+            st.caption("Tanggal biru menandakan ada jadwal. Ketuk tombol tanggal di bawah untuk membuka jadwal hari itu.")
+            sorted_days = sorted(booked_days.keys())
+            for day in sorted_days:
+                items = booked_days[day]
+                names = ", ".join(x.get("nama", "-") for x in items[:2])
+                if len(items) > 2:
+                    names += f" +{len(items)-2} lagi"
+                label = f"{day:02d} {month_name[:3]} • {names}"
+                if st.button(label, key=f"{key_prefix}_pick_{year}_{month}_{day}", use_container_width=True):
+                    st.session_state["selected_date_override"] = date(year, month, day)
+                    st.session_state["menu_override"] = "BERANDA"
+                    st.rerun()
         else:
-            st.caption("Belum ada jadwal pada bulan ini.")
+            st.caption("Belum ada schedule pada bulan ini.")
+    elif booked_days:
+        total_jobs = sum(len(v) for v in booked_days.values())
+        st.caption(f"Tanggal warna biru menandakan ada jadwal. Total job bulan ini: {total_jobs}")
+    else:
+        st.caption("Belum ada jadwal pada bulan ini. Semua tanggal tampil normal.")
 
     return booked_days
+
 
 def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pengeluaran_manual):
     report_rows = []
@@ -538,7 +559,7 @@ def make_finance_pdf(df, summary_dict, title):
 # --- LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
-    st.title("E-Admin Login")
+    st.title("💄 E-Admin Login")
     email = st.text_input("Email", value="elisabethmua18@gmail.com")
     pw = st.text_input("Password", type="password")
     if st.button("MASUK"):
@@ -547,15 +568,33 @@ if not st.session_state.auth:
         else: st.error("Akses Ditolak!")
     st.stop()
 
+# --- QUERY PARAM HANDLER ---
+query_params = st.query_params
+if query_params.get("menu") in ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]:
+    st.session_state["menu_override"] = query_params.get("menu")
+
+selected_date_param = query_params.get("selected_date")
+if selected_date_param:
+    try:
+        st.session_state["selected_date_override"] = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
+    except Exception:
+        pass
+
+for key in ["beranda_cal_month", "beranda_cal_year", "hapus_cal_month", "hapus_cal_year"]:
+    if query_params.get(key):
+        try:
+            st.session_state[key] = int(query_params.get(key))
+        except Exception:
+            pass
+
 # --- MENU SIDEBAR ---
 menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
-current_menu = st.session_state.get("menu", "BERANDA")
-default_index = menu_list.index(current_menu) if current_menu in menu_list else 0
+default_menu = st.session_state.pop("menu_override", "BERANDA")
+default_index = menu_list.index(default_menu) if default_menu in menu_list else 0
 menu = st.sidebar.radio("MENU", menu_list, index=default_index)
-st.session_state["menu"] = menu
 # --- 1. BERANDA ---
 if menu == "BERANDA":
-    st.header("Jadwal Elisabeth MUA")
+    st.header("🌸 Jadwal Elisabeth MUA")
     today = date.today()
 
     cal_col1, cal_col2 = st.columns(2)
@@ -577,26 +616,9 @@ if menu == "BERANDA":
     st.session_state["beranda_cal_month"] = selected_month
     st.session_state["beranda_cal_year"] = selected_year
 
-    if "selected_date_active" not in st.session_state:
-        st.session_state["selected_date_active"] = today
-
-    current_active = st.session_state["selected_date_active"]
-    if current_active.month != selected_month or current_active.year != selected_year:
-        booked_days_month = []
-        for b in st.session_state.db.get('bookings', []):
-            try:
-                dt = datetime.strptime(b.get('tgl', ''), "%d/%m/%Y")
-                if dt.month == selected_month and dt.year == selected_year:
-                    booked_days_month.append(dt.day)
-            except Exception:
-                pass
-        default_day = min(booked_days_month) if booked_days_month else 1
-        st.session_state["selected_date_active"] = date(selected_year, selected_month, default_day)
-
     display_clickable_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, key_prefix="beranda")
 
-    selected_date = st.session_state.get("selected_date_active", today)
-    st.session_state["selected_date_active"] = selected_date
+    selected_date = st.session_state.pop("selected_date_override", today)
     st.caption(f"Menampilkan jadwal untuk: **{selected_date.strftime('%d/%m/%Y')}**")
     st.divider()
     
@@ -611,41 +633,162 @@ if menu == "BERANDA":
             with st.container():
                 st.markdown(f"""
                 <div class="job-card">
-                    <h3 style="margin:0; color:#F19CBB;">{b.get('nama','-')} - {b.get('inv_no','-')}</h3>
-                    <p style="margin:8px 0 0 0;"><b>Tim:</b> {b.get('tim_type','-') if b.get('hire_tim') else '-'} | <b>Anggota:</b> {b.get('tim_nama','-') if b.get('hire_tim') else '-'}</p>
-                    <p style="margin:6px 0 0 0;"><b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}</p>
-                    <p style="margin:6px 0 0 0;"><b>Status:</b> {b.get('status','PENDING')}</p>
+                    <h3 style="margin:0; color:#F19CBB;">
+<h3 style="margin:0; color:#F19CBB;">
+{b.get('nama','-')} - {b.get('inv_no','-')}
+</h3>
+
+<p style="margin:5px 0;">
+<b>Tim:</b> {b.get('tim_type','-') if b.get('hire_tim') else '-'}
+| <b>Anggota:</b> {b.get('tim_nama','-') if b.get('hire_tim') else '-'}
+</p>
+
+<p style="margin:5px 0;">
+<b>Jam Kerja:</b> {b.get('jam_ready','-')} | <b>Lokasi:</b> {b.get('alamat_mu','-')}
+</p>
+
+<p style="margin:5px 0;">
+<b>Status:</b> {b.get('status','PENDING')}
+</p>
+</p>
                 </div>
                 """, unsafe_allow_html=True)
-
-                st.markdown(
-                    f'<p class="otw-info">Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>',
-                    unsafe_allow_html=True
-                )
-
+                st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
+                
                 c1, c2, c3 = st.columns(3)
-                if c1.button("EDIT", key=f"ed_{i}", use_container_width=True):
-                    st.session_state["edit_data"] = dict(b)
-                    st.session_state["input_pakets"] = [dict(x) for x in b.get("paket_list", [])]
-                    st.session_state["input_manuals"] = [dict(x) for x in b.get("manual_list", [])]
-                    st.session_state["menu"] = "INPUT JADWAL"
+                if c1.button("EDIT", key=f"ed_{i}"):
+                    st.session_state.edit_data = dict(b)
+                    st.session_state.input_pakets = [dict(x) for x in b.get('paket_list', [])]
+                    st.session_state.input_manuals = [dict(x) for x in b.get('manual_list', [])]
+                    st.session_state["menu_override"] = "INPUT JADWAL"
+                    st.rerun()
+                
+                if c2.button("✅ SELESAI", key=f"dn_{i}"):
+                    b['status'] = "SELESAI (LUNAS)"
+                    save_data(); st.rerun()
+                
+                if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
+                    st.session_state.current_faktur = dict(b)
                     st.rerun()
 
-                if c2.button("SELESAI", key=f"dn_{i}", use_container_width=True):
-                    b["status"] = "SELESAI (LUNAS)"
-                    save_data()
-                    st.rerun()
+        if 'current_faktur' in st.session_state:
+            f = st.session_state.current_faktur
+                p = st.session_state.db['profile']
+                s = st.session_state.db['faktur_settings']
+                            
+                total_p = sum([float(item.get('price', 0)) * int(item.get('qty', 1)) for item in f.get('paket_list', [])])
+                total_m = sum([float(item.get('harga', 0)) * int(item.get('qty', 1)) for item in f.get('manual_list', [])])
+                total_semua = total_p + total_m
+                dp_val = float(f.get('dp', 0))
+                sisa_val = max(total_semua - dp_val, 0)
+                
+                is_lunas = f.get('status') == "SELESAI (LUNAS)"
+                warna_tema = "#4caf50" if is_lunas else "#F19CBB"
+                stempel_text = "LUNAS" if is_lunas else "BOOKED"
+            
+                logo_html = ""
+                if 'logo_img' in st.session_state:
+                    logo_html = f'<img src="data:image/png;base64,{st.session_state.logo_img}" style="width:70px;">'
+            
+                isi_layanan = ""
+                for item in f.get('paket_list', []):
+                    qty = int(item.get('qty', 1))
+                    isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item.get('nama')}</span><span>Rp {float(item.get('price',0))*qty:,.0f}</span></div>"
+                for item_m in f.get('manual_list', []):
+                    qty = int(item_m.get('qty', 1))
+                    isi_layanan += f"<div style='display:flex; justify-content:space-between; gap:12px;'><span>{qty}x {item_m.get('nama')}</span><span>Rp {float(item_m.get('harga',0))*qty:,.0f}</span></div>"
+            
+                tnc_html = s.get('tnc','').replace('\n','<br>')
+            
+                html_final = f"""
+                <div style="background:white;padding:20px;border-radius:15px;font-family:sans-serif;position:relative;">
+                   <div style="
+                    position:absolute;
+                    top:50%;
+                    left:50%;
+                    transform:translate(-50%, -50%) rotate(-15deg);
+                    font-size:70px;
+                    font-weight:bold;
+                    color:{warna_tema};
+                    border:5px solid {warna_tema};
+                    padding:20px 40px;
+                    opacity:0.40;
+                    border-radius:10px;
+                    pointer-events:none;
+                ">
+                    {stempel_text}
+                </div>
+                    <div style="position:absolute;top:10px;left:10px;">{logo_html}</div>
+            
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+    
+    <div>
+    <h3 style="margin:0; color:#F19CBB;">{p.get('nama','Elisabeth MUA')}</h3>
+    <p style="margin:0; font-size:11px; color:#888;">
+        {p.get('alamat','')}<br>
+        WA: {p.get('hp','')}
+    </p>
+    </div>
 
-                if c3.button("FAKTUR", key=f"fkt_{i}", use_container_width=True):
-                    st.session_state["current_faktur_inv"] = b.get("inv_no")
-                    st.rerun()
+    <img src="{p.get('logo','')}" style="height:60px;">
 
-                if 'current_faktur_inv' in st.session_state:
-                    del st.session_state['current_faktur_inv']
-                st.rerun()
+</div>
+            
+                    <hr>
+            
+                    <b>Invoice:</b> {f.get('inv_no')}<br>
+                    <b>Tanggal:</b> {f.get('tgl')}<br>
+                    <b>Klien:</b> {f.get('nama')}<br>
+                    <b>WA:</b> {f.get('wa')}<br>
+                    <b>Lokasi:</b> {f.get('alamat_mu')}<br>
+                    <b>Jam:</b> {f.get('jam_ready')}<br>
+            
+                    <hr>
+            
+                    <b>RINCIAN</b>
+                    {isi_layanan}
+            
+                    <hr>
+            
+                    <b>Total:</b> Rp {total_semua:,.0f}<br>
+                    <b>DP:</b> Rp {dp_val:,.0f}<br>
+                    <b>Sisa:</b> Rp {sisa_val:,.0f} { '(LUNAS)' if is_lunas else '' }
+            
+                    <hr>
+            
+                    <b>Transfer:</b><br>
+                    {p.get('bank')} {p.get('no_rek')}<br>
+                    a/n {p.get('an')}
+            
+                    <br><br>
+            
+                    <b>Syarat & Ketentuan</b><br>
+                    {tnc_html}
+            
+                    <br><br>
+            
+                    <center><i>{s.get('salam')}</i></center>
+            
+                    <div style="text-align:right;margin-top:40px;">
+                    {s.get('signature')}
+                    </div>
+                </div>
+                """
+            
+                st.divider()
+                components.html(html_final, height=900, scrolling=True)
+            
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
+                with col_b:
+                    if st.button("❌ TUTUP"):
+                        del st.session_state.current_faktur
+                        st.rerun()
+        
 # --- 2. MENU INPUT JADWAL ---
 elif menu == "INPUT JADWAL":
-    st.header("Tambah / Edit Jadwal")
+    st.header("📝 Tambah / Edit Jadwal")
     # ... sisa kode input jadwal ...
     
     # Ambil data dari tombol EDIT jika ada
@@ -696,7 +839,7 @@ elif menu == "INPUT JADWAL":
             cp1, cp2, cp3 = st.columns([3, 1, 0.5])
             cp1.markdown(f"**{item.get('nama','')}**")
             item['qty'] = cp2.number_input("Qty", min_value=1, key=f"qty_p_{i}", value=item.get('qty', 1))
-            if cp3.button("X", key=f"del_p_{i}"):
+            if cp3.button("❌", key=f"del_p_{i}"):
                 st.session_state.input_pakets.pop(i)
                 st.rerun()
 
@@ -711,7 +854,7 @@ elif menu == "INPUT JADWAL":
             item_m['nama'] = cm1.text_input("Keterangan", key=f"m_nama_{j}", value=item_m.get('nama',''))
             item_m['harga'] = cm2.number_input("Harga", min_value=0, key=f"m_harga_{j}", value=item_m.get('harga', 0))
             item_m['qty'] = cm3.number_input("Qty", min_value=1, key=f"m_qty_{j}", value=item_m.get('qty', 1))
-            if cm4.button("X", key=f"del_m_{j}"):
+            if cm4.button("❌", key=f"del_m_{j}"):
                 st.session_state.input_manuals.pop(j)
                 st.rerun()
 
@@ -732,7 +875,7 @@ elif menu == "INPUT JADWAL":
             fee_tim_tambahan = 0
 
         st.divider()
-        if st.button("SIMPAN JADWAL KE DATABASE"):
+        if st.button("💾 SIMPAN JADWAL KE DATABASE"):
             if not nama_klien:
                 st.error("Nama Klien wajib diisi!")
             else:
@@ -773,7 +916,7 @@ elif menu == "INPUT JADWAL":
                 st.rerun()
                 # --- 3. LAYANAN ---
 elif menu == "LAYANAN":
-    st.header("Master Layanan Utama")
+    st.header("💄 Master Layanan Utama")
     st.info("Tambahkan paket yang sering digunakan di sini agar bisa dipilih cepat saat input jadwal.")
     
     with st.form("master_form"):
@@ -802,7 +945,7 @@ elif menu == "LAYANAN":
 
 # --- 4. PROFIL & SETTING ---
 elif menu == "PROFIL & SETTING":
-    st.header("Profil & Setting Faktur")
+    st.header("👤 Profil & Setting Faktur")
     
     tab_profil, tab_faktur = st.tabs(["PROFIL BISNIS", "SETTING FAKTUR"])
     
@@ -834,7 +977,7 @@ elif menu == "PROFIL & SETTING":
         st.session_state.db['profile']['no_rek'] = st.text_input("Nomor Rekening", st.session_state.db['profile'].get('no_rek', ''))
         st.session_state.db['profile']['an'] = st.text_input("Atas Nama (A/N)", st.session_state.db['profile'].get('an', ''))
         
-        if st.button("SIMPAN SEMUA PROFIL"):
+        if st.button("💾 SIMPAN SEMUA PROFIL"):
             save_data()
             st.success("Profil Bisnis Berhasil Diperbarui!")
 
@@ -847,12 +990,12 @@ elif menu == "PROFIL & SETTING":
         st.divider()
         st.session_state.db['faktur_settings']['next_inv'] = st.number_input("Nomor Invoice Berikutnya", min_value=1, value=st.session_state.db['faktur_settings'].get('next_inv', 1))
         
-        if st.button("SIMPAN SETTING FAKTUR"):
+        if st.button("💾 SIMPAN SETTING FAKTUR"):
             save_data()
             st.success("Pengaturan Faktur Berhasil Disimpan!")
             # --- 5. KEUANGAN ---
 elif menu == "KEUANGAN":
-    st.header("Laporan Keuangan Bulanan")
+    st.header("💰 Laporan Keuangan Bulanan")
 
     c1, c2 = st.columns(2)
     sel_month = c1.selectbox("Pilih Bulan", ["01","02","03","04","05","06","07","08","09","10","11","12"], index=datetime.now().month-1)
@@ -876,7 +1019,7 @@ elif menu == "KEUANGAN":
     final_omset = finance_data["final_omset"]
     nett = finance_data["nett"]
 
-    st.subheader("Pemasukan Otomatis (Jadwal)")
+    st.subheader("📊 Pemasukan Otomatis (Jadwal)")
     if list_pemasukan_jadwal:
         st.table(pd.DataFrame(list_pemasukan_jadwal))
     else:
@@ -884,7 +1027,7 @@ elif menu == "KEUANGAN":
 
     st.divider()
 
-    st.subheader("Pengeluaran Otomatis (Fee Tim Tambahan)")
+    st.subheader("🤝 Pengeluaran Otomatis (Fee Tim Tambahan)")
     if list_pengeluaran_tim:
         st.table(pd.DataFrame(list_pengeluaran_tim))
     else:
@@ -895,7 +1038,7 @@ elif menu == "KEUANGAN":
     col_in, col_out = st.columns(2)
 
     with col_in:
-        st.subheader("Penghasilan Lain")
+        st.subheader("➕ Penghasilan Lain")
         with st.form("pemasukan_lain_form"):
             ket_in = st.text_input("Keterangan (Misal: Jual Thrift)")
             nom_in = st.number_input("Nominal (Rp)", min_value=0)
@@ -908,7 +1051,7 @@ elif menu == "KEUANGAN":
                 save_data(); st.rerun()
 
     with col_out:
-        st.subheader("Pengeluaran")
+        st.subheader("💸 Pengeluaran")
         with st.form("pengeluaran_form"):
             ket_out = st.text_input("Keterangan (Misal: Beli Foundation)")
             nom_out = st.number_input("Nominal (Rp)", min_value=0)
@@ -927,7 +1070,7 @@ elif menu == "KEUANGAN":
     res3.metric("NETT (Bersih)", format_rupiah(nett))
 
     st.divider()
-    st.subheader("Download Laporan")
+    st.subheader("📥 Download Laporan")
     st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
@@ -949,13 +1092,13 @@ elif menu == "KEUANGAN":
 
         d1, d2 = st.columns(2)
         d1.download_button(
-            "Download Excel",
+            "📊 Download Excel",
             data=excel_buffer,
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         d2.download_button(
-            "Download PDF",
+            "📄 Download PDF",
             data=pdf_buffer,
             file_name=f"laporan_keuangan_{sel_month}_{sel_year}.pdf",
             mime="application/pdf"
@@ -977,10 +1120,10 @@ elif menu == "KEUANGAN":
 
 # --- 6. HAPUS DATA ---
 elif menu == "HAPUS DATA":
-    st.header("Hapus Data")
+    st.header("🗑️ Hapus Data")
     st.warning("Hapus data dilakukan permanen. Pastikan data yang dipilih memang benar.")
 
-    st.subheader("Kalender Jadwal Realtime")
+    st.subheader("📅 Kalender Jadwal Realtime")
     today = date.today()
     del_col1, del_col2 = st.columns(2)
     delete_current_month = int(st.session_state.get("hapus_cal_month", today.month))
@@ -1064,4 +1207,3 @@ elif menu == "HAPUS DATA":
                 save_data()
                 st.success("Pengeluaran manual berhasil dihapus.")
                 st.rerun()
-
