@@ -307,7 +307,7 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main", clickab
                     names += f" +{len(items)-2} lagi"
                 label = f"{day:02d} {month_name[:3]} • {names}"
                 if st.button(label, key=f"{key_prefix}_pick_{year}_{month}_{day}", use_container_width=True):
-                    st.session_state["selected_date_override"] = date(year, month, day)
+                    st.session_state["selected_date_active"] = date(year, month, day)
                     st.session_state["menu_override"] = "BERANDA"
                     st.rerun()
         else:
@@ -574,23 +574,7 @@ if not st.session_state.auth:
     st.stop()
 
 # --- QUERY PARAM HANDLER ---
-query_params = st.query_params
-if query_params.get("menu") in ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]:
-    st.session_state["menu_override"] = query_params.get("menu")
-
-selected_date_param = query_params.get("selected_date")
-if selected_date_param:
-    try:
-        st.session_state["selected_date_override"] = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
-    except Exception:
-        pass
-
-for key in ["beranda_cal_month", "beranda_cal_year", "hapus_cal_month", "hapus_cal_year"]:
-    if query_params.get(key):
-        try:
-            st.session_state[key] = int(query_params.get(key))
-        except Exception:
-            pass
+# Dinonaktifkan agar klik tanggal / tombol tidak tertimpa state lama dari URL
 
 # --- MENU SIDEBAR ---
 menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
@@ -623,7 +607,8 @@ if menu == "BERANDA":
 
     display_clickable_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, key_prefix="beranda")
 
-    selected_date = st.session_state.pop("selected_date_override", today)
+    selected_date = st.session_state.get("selected_date_active", today)
+    st.session_state["selected_date_active"] = selected_date
     st.caption(f"Menampilkan jadwal untuk: **{selected_date.strftime('%d/%m/%Y')}**")
     st.divider()
     
