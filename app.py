@@ -656,24 +656,28 @@ if menu == "BERANDA":
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
                 
                 c1, c2, c3 = st.columns(3)
-                if c1.button("EDIT", key=f"ed_{i}"):
+                if c1.button("EDIT", key=f"ed_{b.get('inv_no', i)}_{b.get('tgl', '')}"):
                     st.session_state.edit_data = dict(b)
                     st.session_state.input_pakets = [dict(x) for x in b.get('paket_list', [])]
                     st.session_state.input_manuals = [dict(x) for x in b.get('manual_list', [])]
                     st.session_state["menu_override"] = "INPUT JADWAL"
                     st.rerun()
                 
-                if c2.button("✅ SELESAI", key=f"dn_{i}"):
+                if c2.button("✅ SELESAI", key=f"dn_{b.get('inv_no', i)}_{b.get('tgl', '')}"):
                     b['status'] = "SELESAI (LUNAS)"
                     save_data(); st.rerun()
                 
-                if c3.button("📄 FAKTUR", key=f"fkt_{i}"):
-                    st.session_state.current_faktur = dict(b)
+                if c3.button("📄 FAKTUR", key=f"fkt_{b.get('inv_no', i)}_{b.get('tgl', '')}"):
+                    st.session_state.current_faktur_inv = b.get("inv_no")
                     st.rerun()
 
 
-                if 'current_faktur' in st.session_state and st.session_state.current_faktur.get('inv_no') == b.get('inv_no'):
-                    f = st.session_state.current_faktur
+                if 'current_faktur_inv' in st.session_state and st.session_state.current_faktur_inv == b.get('inv_no'):
+                    f = next((x for x in st.session_state.db['bookings'] if x.get('inv_no') == st.session_state.current_faktur_inv), None)
+                    if not f:
+                        st.warning("Data faktur tidak ditemukan.")
+                        del st.session_state.current_faktur_inv_inv
+                        st.rerun()
                     p = st.session_state.db['profile']
                     s = st.session_state.db['faktur_settings']
                                 
@@ -784,7 +788,7 @@ if menu == "BERANDA":
                         st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html", key=f"download_invoice_{f.get('inv_no','x')}")
                     with col_b:
                         if st.button("❌ TUTUP", key=f"close_invoice_{f.get('inv_no','x')}"):
-                            del st.session_state.current_faktur
+                            del st.session_state.current_faktur_inv
                             st.rerun()
             
 # --- 2. MENU INPUT JADWAL ---
