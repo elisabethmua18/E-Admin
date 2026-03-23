@@ -101,7 +101,6 @@ def merge_defaults(data: dict) -> dict:
 
     for booking in data["bookings"]:
         booking.setdefault("fee_tim_tambahan", 0)
-        booking.setdefault("uid", f"{booking.get('inv_no','')}|{booking.get('tgl','')}|{booking.get('nama','')}|{booking.get('wa','')}")
 
     return data
 
@@ -213,23 +212,23 @@ def format_rupiah(nominal):
     return f"Rp {float(nominal or 0):,.0f}"
 
 
-def get_booking_uid(booking):
-    return f"{booking.get('inv_no','')}|{booking.get('tgl','')}|{booking.get('nama','')}|{booking.get('wa','')}"
-
-
-def get_booking_by_uid(uid):
-    for booking in st.session_state.db.get('bookings', []):
-        if get_booking_uid(booking) == uid:
-            return booking
-    return None
-
-
-
 def get_booking_by_inv_no(inv_no):
     for booking in st.session_state.db.get('bookings', []):
         if booking.get('inv_no') == inv_no:
             return booking
     return None
+
+
+def get_booked_dates_for_month(bookings, month, year):
+    dates = []
+    for booking in bookings:
+        try:
+            dt = datetime.strptime(booking.get('tgl', ''), "%d/%m/%Y").date()
+            if dt.month == month and dt.year == year:
+                dates.append(dt)
+        except Exception:
+            continue
+    return sorted(dates)
 
 
 def display_clickable_calendar(bookings, month, year, key_prefix="main", clickable=True, show_picker=True):
@@ -320,7 +319,7 @@ def display_clickable_calendar(bookings, month, year, key_prefix="main", clickab
                     names += f" +{len(items)-2} lagi"
                 label = f"{day:02d} {month_name[:3]} • {names}"
                 if st.button(label, key=f"{key_prefix}_pick_{year}_{month}_{day}", use_container_width=True):
-                    st.session_state["selected_date_override"] = date(year, month, day)
+                    st.session_state["selected_date_active"] = date(year, month, day)
                     st.session_state["menu_override"] = "BERANDA"
                     st.rerun()
         else:
@@ -587,23 +586,7 @@ if not st.session_state.auth:
     st.stop()
 
 # --- QUERY PARAM HANDLER ---
-query_params = st.query_params
-if query_params.get("menu") in ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]:
-    st.session_state["menu_override"] = query_params.get("menu")
-
-selected_date_param = query_params.get("selected_date")
-if selected_date_param:
-    try:
-        st.session_state["selected_date_override"] = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
-    except Exception:
-        pass
-
-for key in ["beranda_cal_month", "beranda_cal_year", "hapus_cal_month", "hapus_cal_year"]:
-    if query_params.get(key):
-        try:
-            st.session_state[key] = int(query_params.get(key))
-        except Exception:
-            pass
+# Dinonaktifkan agar klik tanggal / tombol tidak tertimpa state lama dari URL
 
 # --- MENU SIDEBAR ---
 menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
@@ -634,9 +617,19 @@ if menu == "BERANDA":
     st.session_state["beranda_cal_month"] = selected_month
     st.session_state["beranda_cal_year"] = selected_year
 
+    booked_dates_month = get_booked_dates_for_month(st.session_state.db.get('bookings', []), selected_month, selected_year)
+    current_active_date = st.session_state.get("selected_date_active")
+
+    if current_active_date is None or current_active_date.month != selected_month or current_active_date.year != selected_year:
+        if booked_dates_month:
+            st.session_state["selected_date_active"] = booked_dates_month[0]
+        else:
+            st.session_state["selected_date_active"] = date(selected_year, selected_month, 1)
+
     display_clickable_calendar(st.session_state.db.get('bookings', []), selected_month, selected_year, key_prefix="beranda")
 
-    selected_date = st.session_state.pop("selected_date_override", today)
+    selected_date = st.session_state.get("selected_date_active", today)
+    st.session_state["selected_date_active"] = selected_date
     st.caption(f"Menampilkan jadwal untuk: **{selected_date.strftime('%d/%m/%Y')}**")
     st.divider()
     
@@ -674,11 +667,10 @@ if menu == "BERANDA":
                 st.markdown(f'<p class="otw-info">🚗 Jam OTW: {b.get("jam_otw","-")} ({b.get("durasi_otw","-")}m)</p>', unsafe_allow_html=True)
                 
                 c1, c2, c3 = st.columns(3)
-                booking_uid = get_booking_uid(b)
                 unique_key = f"{b.get('inv_no', i)}_{b.get('tgl', '')}_{b.get('nama', '')}"
 
                 if c1.button("EDIT", key=f"ed_{unique_key}"):
-                    selected_booking = get_booking_by_uid(booking_uid)
+                    selected_booking = get_booking_by_inv_no(b.get('inv_no'))
                     if selected_booking:
                         st.session_state.edit_data = dict(selected_booking)
                         st.session_state.input_pakets = [dict(x) for x in selected_booking.get('paket_list', [])]
@@ -687,21 +679,21 @@ if menu == "BERANDA":
                         st.rerun()
 
                 if c2.button("✅ SELESAI", key=f"dn_{unique_key}"):
-                    selected_booking = get_booking_by_uid(booking_uid)
+                    selected_booking = get_booking_by_inv_no(b.get('inv_no'))
                     if selected_booking:
                         selected_booking['status'] = "SELESAI (LUNAS)"
                         save_data()
                         st.rerun()
 
                 if c3.button("📄 FAKTUR", key=f"fkt_{unique_key}"):
-                    st.session_state.current_faktur_uid = booking_uid
+                    st.session_state.current_faktur_inv = b.get("inv_no")
                     st.rerun()
 
-    if 'current_faktur_uid' in st.session_state:
-        f = get_booking_by_uid(st.session_state.current_faktur_uid)
+    if 'current_faktur_inv' in st.session_state:
+        f = get_booking_by_inv_no(st.session_state.current_faktur_inv)
         if not f:
             st.warning("Data faktur tidak ditemukan.")
-            del st.session_state.current_faktur_uid
+            del st.session_state.current_faktur_inv
             st.rerun()
 
         p = st.session_state.db['profile']
@@ -814,7 +806,7 @@ if menu == "BERANDA":
             st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html", key=f"download_invoice_{f.get('inv_no','x')}")
         with col_b:
             if st.button("❌ TUTUP", key=f"close_invoice_{f.get('inv_no','x')}"):
-                del st.session_state.current_faktur_uid
+                del st.session_state.current_faktur_inv
                 st.rerun()
 
 # --- 2. MENU INPUT JADWAL ---
@@ -933,7 +925,6 @@ elif menu == "INPUT JADWAL":
                     "status": edit_data.get('status', 'PENDING')
                 }
                 
-                new_booking["uid"] = f"{new_booking.get('inv_no','')}|{new_booking.get('tgl','')}|{new_booking.get('nama','')}|{new_booking.get('wa','')}"
                 st.session_state.db['bookings'].append(new_booking)
                 if not edit_data:
                     st.session_state.db['faktur_settings']['next_inv'] += 1
