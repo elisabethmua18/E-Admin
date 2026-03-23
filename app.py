@@ -657,10 +657,11 @@ if menu == "BERANDA":
                 
                 c1, c2, c3 = st.columns(3)
                 if c1.button("EDIT", key=f"ed_{i}"):
-                    st.session_state.edit_data = b
-                    st.session_state.input_pakets = b.get('paket_list', [])
-                    st.session_state.input_manuals = b.get('manual_list', [])
-                    st.warning("Data siap diedit! Silakan klik menu 'INPUT JADWAL'")
+                    st.session_state.edit_data = dict(b)
+                    st.session_state.input_pakets = [dict(x) for x in b.get('paket_list', [])]
+                    st.session_state.input_manuals = [dict(x) for x in b.get('manual_list', [])]
+                    st.session_state["menu_override"] = "INPUT JADWAL"
+                    st.rerun()
                 
                 if c2.button("✅ SELESAI", key=f"dn_{i}"):
                     b['status'] = "SELESAI (LUNAS)"
@@ -671,7 +672,7 @@ if menu == "BERANDA":
                     st.rerun()
 
 
-                if 'current_faktur' in st.session_state:
+                if 'current_faktur' in st.session_state and st.session_state.current_faktur.get('inv_no') == b.get('inv_no'):
                     f = st.session_state.current_faktur
                     p = st.session_state.db['profile']
                     s = st.session_state.db['faktur_settings']
@@ -780,9 +781,9 @@ if menu == "BERANDA":
                 
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html")
+                        st.download_button("💾 DOWNLOAD", html_final, file_name=f"Invoice_{f.get('nama','')}.html", key=f"download_invoice_{f.get('inv_no','x')}")
                     with col_b:
-                        if st.button("❌ TUTUP"):
+                        if st.button("❌ TUTUP", key=f"close_invoice_{f.get('inv_no','x')}"):
                             del st.session_state.current_faktur
                             st.rerun()
             
