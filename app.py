@@ -213,6 +213,18 @@ def format_rupiah(nominal):
     return f"Rp {float(nominal or 0):,.0f}"
 
 
+def get_booking_uid(booking):
+    return f"{booking.get('inv_no','')}|{booking.get('tgl','')}|{booking.get('nama','')}|{booking.get('wa','')}"
+
+
+def get_booking_by_uid(uid):
+    for booking in st.session_state.db.get('bookings', []):
+        if get_booking_uid(booking) == uid:
+            return booking
+    return None
+
+
+
 def get_booking_by_inv_no(inv_no):
     for booking in st.session_state.db.get('bookings', []):
         if booking.get('inv_no') == inv_no:
