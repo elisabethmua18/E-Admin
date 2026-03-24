@@ -99,36 +99,6 @@
             "status": "PENDING"
         },
         {
-            "inv_no": "INV0003",
-            "nama": "Kak Elvina",
-            "tgl": "01/04/2026",
-            "wa": "30303&39",
-            "alamat_mu": "Unimus",
-            "jam_ready": "03:00-04:00",
-            "jam_otw": "04:15",
-            "durasi_otw": 15,
-            "paket_list": [
-                {
-                    "nama": "makeup wisuda+ hijabdo",
-                    "qty": 1,
-                    "price": 250000
-                }
-            ],
-            "manual_list": [
-                {
-                    "nama": "Ongkir ",
-                    "harga": 15000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 50000,
-            "status": "PENDING"
-        },
-        {
             "inv_no": "INV0004",
             "nama": "Kak Olla",
             "tgl": "11/04/2026",
