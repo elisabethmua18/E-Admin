@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 4,
+        "next_inv": 5,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -156,6 +156,36 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 50000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0004",
+            "nama": "Kak Olla",
+            "tgl": "11/04/2026",
+            "wa": "‪+62 877‑5520‑9530‬",
+            "alamat_mu": "Hotel Queen Boutique",
+            "jam_ready": "08:00-10:00",
+            "jam_otw": "10:15",
+            "durasi_otw": 15,
+            "paket_list": [
+                {
+                    "nama": "makeup pendamping wisuda+ hairdo",
+                    "qty": 1,
+                    "price": 250000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir (diskon 10k)",
+                    "harga": 20000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 75000,
             "status": "PENDING"
         }
     ],
