@@ -127,30 +127,6 @@
             "fee_tim_tambahan": 0,
             "dp": 75000,
             "status": "PENDING"
-        },
-        {
-            "inv_no": "INV0005",
-            "nama": "Mbak Veny (makeup 4 orang)",
-            "tgl": "05/04/2026",
-            "wa": "+62 856-0251-7399",
-            "alamat_mu": "Apotek Mrican",
-            "jam_ready": "07:00-10:00",
-            "jam_otw": "10:15",
-            "durasi_otw": 15,
-            "paket_list": [],
-            "manual_list": [
-                {
-                    "nama": "Makeup Borongan",
-                    "harga": 75000,
-                    "qty": 4
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 0,
-            "status": "PENDING"
         }
     ],
     "pengeluaran": [],
