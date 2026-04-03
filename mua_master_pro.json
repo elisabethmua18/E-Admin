@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 8,
+        "next_inv": 9,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -182,6 +182,30 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 100000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0008",
+            "nama": "Kak Wulan",
+            "tgl": "05/04/2026",
+            "wa": "+62 812-2557-4053",
+            "alamat_mu": "Kasipah Semarang",
+            "jam_ready": "03:30-06:00",
+            "jam_otw": "06:15",
+            "durasi_otw": 15,
+            "paket_list": [
+                {
+                    "nama": "Makeup Hijab Bridesmaid",
+                    "qty": 1,
+                    "price": 175000
+                }
+            ],
+            "manual_list": [],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 75000,
             "status": "PENDING"
         }
     ],
