@@ -309,36 +309,6 @@
             "fee_tim_tambahan": 0,
             "dp": 0,
             "status": "PENDING"
-        },
-        {
-            "inv_no": "INV0015",
-            "nama": "Nznsnsnsmsm",
-            "tgl": "07/04/2026",
-            "wa": "838383838",
-            "alamat_mu": "Nxnznsnxm",
-            "jam_ready": "08:00-10:00",
-            "jam_otw": "07:00",
-            "durasi_otw": 30,
-            "paket_list": [
-                {
-                    "nama": "makeup wisuda+ hairdo",
-                    "qty": 1,
-                    "price": 300000
-                }
-            ],
-            "manual_list": [
-                {
-                    "nama": "Ongkir ",
-                    "harga": 20000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": true,
-            "tim_type": "Hairdo",
-            "tim_nama": "Ovie",
-            "fee_tim_tambahan": 125000,
-            "dp": 100000,
-            "status": "PENDING"
         }
     ],
     "pengeluaran": [
