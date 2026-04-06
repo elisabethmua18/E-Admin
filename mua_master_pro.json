@@ -209,6 +209,12 @@
             "status": "SELESAI (LUNAS)"
         }
     ],
-    "pengeluaran": [],
+    "pengeluaran": [
+        {
+            "tgl": "06/04/2026",
+            "ket": "Fee Tim Hairdo Kak Alec",
+            "nom": 230000
+        }
+    ],
     "pemasukan_lain": []
 }
