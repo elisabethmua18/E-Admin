@@ -345,8 +345,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
         if len(tgl_parts) != 3 or tgl_parts[1] != sel_month or tgl_parts[2] != sel_year:
             continue
 
-        total_klien = sum(float(p.get('price', 0)) * int(p.get('qty', 1)) for p in j.get('paket_list', [])) +             sum(float(m.get('harga', 0)) * int(m.get('qty', 1)) for m in j.get('manual_list', []))
+        total_klien = sum(float(p.get('price', 0)) * int(p.get('qty', 1)) for p in j.get('paket_list', [])) + sum(float(m.get('harga', 0)) * int(m.get('qty', 1)) for m in j.get('manual_list', []))
         dp_klien = float(j.get('dp', 0) or 0)
+        inv_no = j.get('inv_no', '')
 
         if j.get('status') == "SELESAI (LUNAS)":
             pelunasan = max(total_klien - dp_klien, 0)
@@ -356,7 +357,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                     "Tanggal": j['tgl'],
                     "Keterangan": f"DP: {j['nama']} (ot)",
                     "Pemasukan": dp_klien,
-                    "Pengeluaran": 0
+                    "Pengeluaran": 0,
+                    "_source_type": "booking",
+                    "_source_id": inv_no
                 })
                 omset_jadwal += dp_klien
             if pelunasan > 0:
@@ -365,7 +368,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                     "Tanggal": j['tgl'],
                     "Keterangan": f"Pelunasan: {j['nama']} (ot)",
                     "Pemasukan": pelunasan,
-                    "Pengeluaran": 0
+                    "Pengeluaran": 0,
+                    "_source_type": "booking",
+                    "_source_id": inv_no
                 })
                 omset_jadwal += pelunasan
         else:
@@ -375,7 +380,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                     "Tanggal": j['tgl'],
                     "Keterangan": f"DP: {j['nama']} (ot)",
                     "Pemasukan": dp_klien,
-                    "Pengeluaran": 0
+                    "Pengeluaran": 0,
+                    "_source_type": "booking",
+                    "_source_id": inv_no
                 })
                 omset_jadwal += dp_klien
 
@@ -387,7 +394,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                 "Tanggal": j['tgl'],
                 "Keterangan": f"{ket_fee} (ot)",
                 "Pemasukan": 0,
-                "Pengeluaran": fee_tim
+                "Pengeluaran": fee_tim,
+                "_source_type": "booking",
+                "_source_id": inv_no
             })
             total_out_tim += fee_tim
 
@@ -401,7 +410,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                 "Tanggal": p.get('tgl', ''),
                 "Keterangan": f"{p.get('ket', '')} (mn)",
                 "Pemasukan": nominal,
-                "Pengeluaran": 0
+                "Pengeluaran": 0,
+                "_source_type": "pemasukan_lain",
+                "_source_id": f"{p.get('tgl', '')}|{p.get('ket', '')}|{float(p.get('nom', 0) or 0)}"
             })
 
     total_out_manual = 0
@@ -414,7 +425,9 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
                 "Tanggal": p.get('tgl', ''),
                 "Keterangan": f"{p.get('ket', '')} (mn)",
                 "Pemasukan": 0,
-                "Pengeluaran": nominal
+                "Pengeluaran": nominal,
+                "_source_type": "pengeluaran",
+                "_source_id": f"{p.get('tgl', '')}|{p.get('ket', '')}|{float(p.get('nom', 0) or 0)}"
             })
 
     total_out = total_out_manual + total_out_tim
@@ -427,7 +440,7 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
         except Exception:
             return datetime.max
 
-    report_rows = sorted(report_rows, key=lambda x: (parse_tanggal(x["Tanggal"]), x["Keterangan"]))
+    report_rows = sorted(report_rows, key=lambda x: (parse_tanggal(x["Tanggal"]), x["Keterangan"], x.get("_source_id", "")))
 
     return {
         "list_pemasukan_jadwal": list_pemasukan_jadwal,
@@ -442,6 +455,37 @@ def build_finance_report_rows(sel_month, sel_year, bookings, pemasukan_lain, pen
         "nett": nett,
         "report_rows": report_rows
     }
+
+
+def delete_finance_report_source(row_data):
+    source_type = row_data.get("_source_type")
+    source_id = row_data.get("_source_id")
+
+    if source_type == "booking":
+        before = len(st.session_state.db.get("bookings", []))
+        st.session_state.db["bookings"] = [
+            b for b in st.session_state.db.get("bookings", [])
+            if b.get("inv_no") != source_id
+        ]
+        return len(st.session_state.db.get("bookings", [])) < before
+
+    if source_type == "pemasukan_lain":
+        for idx, item in enumerate(st.session_state.db.get("pemasukan_lain", [])):
+            item_id = f"{item.get('tgl', '')}|{item.get('ket', '')}|{float(item.get('nom', 0) or 0)}"
+            if item_id == source_id:
+                st.session_state.db["pemasukan_lain"].pop(idx)
+                return True
+        return False
+
+    if source_type == "pengeluaran":
+        for idx, item in enumerate(st.session_state.db.get("pengeluaran", [])):
+            item_id = f"{item.get('tgl', '')}|{item.get('ket', '')}|{float(item.get('nom', 0) or 0)}"
+            if item_id == source_id:
+                st.session_state.db["pengeluaran"].pop(idx)
+                return True
+        return False
+
+    return False
 
 
 def make_finance_excel(df, summary_dict):
@@ -1158,21 +1202,41 @@ elif menu == "KEUANGAN":
     st.caption("Format rincian: Tanggal, Keterangan, Pemasukan, Pengeluaran | (ot) = otomatis, (mn) = manual")
     laporan_df = pd.DataFrame(finance_data["report_rows"])
     if not laporan_df.empty:
-        laporan_tampil = laporan_df.copy()
-        laporan_tampil.loc[len(laporan_tampil)] = {
-            "Tanggal": "",
-            "Keterangan": "TOTAL",
-            "Pemasukan": finance_data["total_pemasukan"],
-            "Pengeluaran": finance_data["total_out"]
-        }
-        st.dataframe(laporan_tampil, use_container_width=True)
+        laporan_display_df = laporan_df[["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"]].copy()
+
+        header_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
+        header_cols[0].markdown("**Tanggal**")
+        header_cols[1].markdown("**Keterangan**")
+        header_cols[2].markdown("**Pemasukan**")
+        header_cols[3].markdown("**Pengeluaran**")
+        header_cols[4].markdown("**Hapus**")
+
+        for idx, row in laporan_df.iterrows():
+            row_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
+            row_cols[0].write(row["Tanggal"])
+            row_cols[1].write(row["Keterangan"])
+            row_cols[2].write(format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-")
+            row_cols[3].write(format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-")
+            if row_cols[4].button("🗑️", key=f"hapus_laporan_final_{sel_month}_{sel_year}_{idx}_{row.get('_source_id', '')}"):
+                deleted = delete_finance_report_source(row.to_dict())
+                if deleted:
+                    save_data()
+                    st.success("Baris laporan berhasil dihapus dari sumber datanya.")
+                    st.rerun()
+                else:
+                    st.warning("Data sumber tidak ditemukan atau sudah terhapus.")
+
+        total_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
+        total_cols[1].markdown("**TOTAL**")
+        total_cols[2].markdown(f"**{format_rupiah(finance_data['total_pemasukan'])}**")
+        total_cols[3].markdown(f"**{format_rupiah(finance_data['total_out'])}**")
 
         st.write(f"**Total Pemasukan:** {format_rupiah(finance_data['total_pemasukan'])}")
         st.write(f"**Total Pengeluaran:** {format_rupiah(finance_data['total_out'])}")
 
         report_title = f"Laporan Keuangan {sel_month}/{sel_year}"
-        excel_buffer = make_finance_excel(laporan_df, finance_data)
-        pdf_buffer = make_finance_pdf(laporan_df, finance_data, report_title)
+        excel_buffer = make_finance_excel(laporan_display_df, finance_data)
+        pdf_buffer = make_finance_pdf(laporan_display_df, finance_data, report_title)
 
         d1, d2 = st.columns(2)
         d1.download_button(
