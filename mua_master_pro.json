@@ -185,30 +185,6 @@
             "status": "SELESAI (LUNAS)"
         },
         {
-            "inv_no": "INV0006",
-            "nama": "Mbak Veny",
-            "tgl": "05/04/2026",
-            "wa": "+62 856-0251-7399",
-            "alamat_mu": "Apotek Mrican",
-            "jam_ready": "07:00-10:00",
-            "jam_otw": "10:15",
-            "durasi_otw": 15,
-            "paket_list": [],
-            "manual_list": [
-                {
-                    "nama": "Makeup Borongan",
-                    "harga": 75000,
-                    "qty": 5
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 0,
-            "status": "SELESAI (LUNAS)"
-        },
-        {
             "inv_no": "INV0009",
             "nama": "Kak Dhiya",
             "tgl": "14/04/2026",
