@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 9,
+        "next_inv": 10,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -207,6 +207,36 @@
             "fee_tim_tambahan": 0,
             "dp": 0,
             "status": "SELESAI (LUNAS)"
+        },
+        {
+            "inv_no": "INV0009",
+            "nama": "Kak Dhiya",
+            "tgl": "14/04/2026",
+            "wa": "‪+62 821‑3480‑4258‬",
+            "alamat_mu": "Tandu Gunting Bawen",
+            "jam_ready": "04:30-05:30",
+            "jam_otw": "05:45",
+            "durasi_otw": 30,
+            "paket_list": [
+                {
+                    "nama": "makeup wisuda+ hijabdo",
+                    "qty": 1,
+                    "price": 250000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir",
+                    "harga": 36000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 75000,
+            "status": "PENDING"
         }
     ],
     "pengeluaran": [
