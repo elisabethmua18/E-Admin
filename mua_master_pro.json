@@ -96,7 +96,7 @@
             "hire_tim": true,
             "tim_type": "Hairdo",
             "tim_nama": "Kak Ovie",
-            "fee_tim_tambahan": 230000,
+            "fee_tim_tambahan": 0,
             "dp": 200000,
             "status": "PENDING"
         },
