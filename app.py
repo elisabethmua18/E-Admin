@@ -1204,59 +1204,52 @@ elif menu == "KEUANGAN":
     if not laporan_df.empty:
         laporan_display_df = laporan_df[["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"]].copy()
 
-        st.markdown("""
-        <style>
-        .finance-mobile-row {
-            font-size: 12px;
-            line-height: 1.2;
-            padding-top: 6px;
+        laporan_editor_df = laporan_display_df.copy()
+        laporan_editor_df["Hapus"] = False
+        laporan_editor_df.loc[len(laporan_editor_df)] = {
+            "Tanggal": "",
+            "Keterangan": "TOTAL",
+            "Pemasukan": finance_data["total_pemasukan"],
+            "Pengeluaran": finance_data["total_out"],
+            "Hapus": False
         }
-        .finance-mobile-head {
-            font-size: 11px;
-            font-weight: 700;
-            color: #8A4D62;
-            padding-bottom: 2px;
-        }
-        .finance-mobile-total {
-            font-size: 12px;
-            font-weight: 700;
-            padding-top: 6px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
 
-        header_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
-        header_cols[0].markdown('<div class="finance-mobile-head">Tanggal</div>', unsafe_allow_html=True)
-        header_cols[1].markdown('<div class="finance-mobile-head">Keterangan</div>', unsafe_allow_html=True)
-        header_cols[2].markdown('<div class="finance-mobile-head">Masuk</div>', unsafe_allow_html=True)
-        header_cols[3].markdown('<div class="finance-mobile-head">Keluar</div>', unsafe_allow_html=True)
-        header_cols[4].markdown('<div class="finance-mobile-head" style="text-align:center;">X</div>', unsafe_allow_html=True)
+        edited_laporan_df = st.data_editor(
+            laporan_editor_df,
+            use_container_width=True,
+            hide_index=True,
+            disabled=["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"],
+            column_config={
+                "Tanggal": st.column_config.TextColumn("Tanggal"),
+                "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
+                "Pemasukan": st.column_config.NumberColumn("Pemasukan", format="Rp %d"),
+                "Pengeluaran": st.column_config.NumberColumn("Pengeluaran", format="Rp %d"),
+                "Hapus": st.column_config.CheckboxColumn("Hapus", help="Centang untuk hapus baris")
+            },
+            key=f"laporan_keuangan_editor_{sel_month}_{sel_year}"
+        )
 
-        for idx, row in laporan_df.iterrows():
-            row_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
-            row_cols[0].markdown(f'<div class="finance-mobile-row">{row["Tanggal"]}</div>', unsafe_allow_html=True)
-            row_cols[1].markdown(f'<div class="finance-mobile-row">{row["Keterangan"]}</div>', unsafe_allow_html=True)
-            row_cols[2].markdown(
-                f'<div class="finance-mobile-row">{format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-"}</div>',
-                unsafe_allow_html=True
-            )
-            row_cols[3].markdown(
-                f'<div class="finance-mobile-row">{format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-"}</div>',
-                unsafe_allow_html=True
-            )
-            if row_cols[4].button("🗑️", key=f"hapus_laporan_final_{sel_month}_{sel_year}_{idx}_{row.get('_source_id', '')}", use_container_width=True):
-                deleted = delete_finance_report_source(row.to_dict())
-                if deleted:
+        selected_delete_rows = []
+        if not edited_laporan_df.empty:
+            for idx in range(len(laporan_df)):
+                try:
+                    if bool(edited_laporan_df.iloc[idx]["Hapus"]):
+                        selected_delete_rows.append(idx)
+                except Exception:
+                    pass
+
+        if selected_delete_rows:
+            if st.button("🗑️ Hapus Baris yang Dicentang", key=f"hapus_centang_laporan_{sel_month}_{sel_year}", use_container_width=True):
+                deleted_count = 0
+                for idx in sorted(selected_delete_rows, reverse=True):
+                    if delete_finance_report_source(laporan_df.iloc[idx].to_dict()):
+                        deleted_count += 1
+                if deleted_count > 0:
                     save_data()
-                    st.success("Baris laporan berhasil dihapus dari sumber datanya.")
+                    st.success(f"{deleted_count} baris laporan berhasil dihapus dari sumber datanya.")
                     st.rerun()
                 else:
                     st.warning("Data sumber tidak ditemukan atau sudah terhapus.")
-
-        total_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
-        total_cols[1].markdown('<div class="finance-mobile-total">TOTAL</div>', unsafe_allow_html=True)
-        total_cols[2].markdown(f'<div class="finance-mobile-total">{format_rupiah(finance_data["total_pemasukan"])}</div>', unsafe_allow_html=True)
-        total_cols[3].markdown(f'<div class="finance-mobile-total">{format_rupiah(finance_data["total_out"])}</div>', unsafe_allow_html=True)
 
         st.write(f"**Total Pemasukan:** {format_rupiah(finance_data['total_pemasukan'])}")
         st.write(f"**Total Pengeluaran:** {format_rupiah(finance_data['total_out'])}")
