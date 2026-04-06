@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 10,
+        "next_inv": 11,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -212,6 +212,30 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 75000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0010",
+            "nama": "Mbak Veny",
+            "tgl": "05/04/2026",
+            "wa": "+62 856-0251-7399",
+            "alamat_mu": "Apotek Mrican",
+            "jam_ready": "07:00-10:00",
+            "jam_otw": "11:00",
+            "durasi_otw": 30,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Borongan",
+                    "harga": 100000,
+                    "qty": 5
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 0,
             "status": "PENDING"
         }
     ],
