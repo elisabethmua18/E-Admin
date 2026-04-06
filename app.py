@@ -590,9 +590,11 @@ if not st.session_state.auth:
 
 # --- MENU SIDEBAR ---
 menu_list = ["BERANDA", "INPUT JADWAL", "LAYANAN", "PROFIL & SETTING", "KEUANGAN", "HAPUS DATA"]
-default_menu = st.session_state.pop("menu_override", "BERANDA")
+default_menu = st.session_state.get("force_menu", st.session_state.pop("menu_override", "BERANDA"))
 default_index = menu_list.index(default_menu) if default_menu in menu_list else 0
 menu = st.sidebar.radio("MENU", menu_list, index=default_index)
+if st.session_state.get("force_menu") and menu != st.session_state.get("force_menu"):
+    st.session_state.pop("force_menu", None)
 # --- 1. BERANDA ---
 if menu == "BERANDA":
     st.header("🌸 Jadwal Elisabeth MUA")
@@ -676,6 +678,7 @@ if menu == "BERANDA":
                         st.session_state.input_pakets = [dict(x) for x in selected_booking.get('paket_list', [])]
                         st.session_state.input_manuals = [dict(x) for x in selected_booking.get('manual_list', [])]
                         st.session_state["menu_override"] = "INPUT JADWAL"
+                        st.session_state["force_menu"] = "INPUT JADWAL"
                         st.rerun()
 
                 if c2.button("✅ SELESAI", key=f"dn_{unique_key}"):
@@ -933,6 +936,8 @@ elif menu == "INPUT JADWAL":
                 if 'edit_data' in st.session_state: del st.session_state.edit_data
                 st.session_state.input_pakets = []
                 st.session_state.input_manuals = []
+                st.session_state.pop("force_menu", None)
+                st.session_state["menu_override"] = "INPUT JADWAL"
                 
                 save_data()
                 st.success("Jadwal Berhasil Disimpan!")
@@ -1045,6 +1050,7 @@ elif menu == "KEUANGAN":
     st.subheader("📊 Pemasukan Otomatis (Jadwal)")
     if list_pemasukan_jadwal:
         st.table(pd.DataFrame(list_pemasukan_jadwal))
+        st.caption("Pemasukan otomatis mengikuti data jadwal. Jika jadwal dihapus, pemasukan otomatis juga tidak akan muncul lagi di laporan.")
     else:
         st.write("Tidak ada aktivitas jadwal di bulan ini.")
 
@@ -1053,6 +1059,25 @@ elif menu == "KEUANGAN":
     st.subheader("🤝 Pengeluaran Otomatis (Fee Tim Tambahan)")
     if list_pengeluaran_tim:
         st.table(pd.DataFrame(list_pengeluaran_tim))
+        booking_with_fee = []
+        for b in st.session_state.db.get('bookings', []):
+            tgl_parts = b.get('tgl', '').split('/')
+            if len(tgl_parts) == 3 and tgl_parts[1] == sel_month and tgl_parts[2] == sel_year and float(b.get('fee_tim_tambahan', 0) or 0) > 0:
+                booking_with_fee.append(b)
+        for i, b in enumerate(booking_with_fee):
+            fee_nom = float(b.get('fee_tim_tambahan', 0) or 0)
+            h1, h2, h3, h4, h5 = st.columns([2, 2, 2, 2, 1])
+            h1.write(b.get('tgl', '-'))
+            h2.write(b.get('nama', '-'))
+            h3.write(b.get('tim_nama', '-'))
+            h4.write(format_rupiah(fee_nom))
+            if h5.button("🗑️", key=f"hapus_fee_auto_{b.get('inv_no', i)}"):
+                target_booking = get_booking_by_inv_no(b.get('inv_no'))
+                if target_booking:
+                    target_booking['fee_tim_tambahan'] = 0
+                    save_data()
+                    st.success(f"Fee tim otomatis untuk {target_booking.get('nama', '-')} berhasil dihapus.")
+                    st.rerun()
     else:
         st.write("Tidak ada fee tim tambahan di bulan ini.")
 
@@ -1073,6 +1098,24 @@ elif menu == "KEUANGAN":
                 })
                 save_data(); st.rerun()
 
+        pemasukan_bulan_ini = [
+            p for p in st.session_state.db.get('pemasukan_lain', [])
+            if len(p.get('tgl', '').split('/')) == 3 and p.get('tgl', '').split('/')[1] == sel_month and p.get('tgl', '').split('/')[2] == sel_year
+        ]
+        if pemasukan_bulan_ini:
+            st.write("**Data Penghasilan Lain Bulan Ini**")
+            for i, p in enumerate(pemasukan_bulan_ini):
+                pi1, pi2, pi3, pi4 = st.columns([2, 3, 2, 1])
+                pi1.write(p.get('tgl', '-'))
+                pi2.write(p.get('ket', '-'))
+                pi3.write(format_rupiah(p.get('nom', 0)))
+                if pi4.button("🗑️", key=f"hapus_pemasukan_{sel_month}_{sel_year}_{i}_{p.get('tgl','')}"):
+                    for idx, item in enumerate(st.session_state.db['pemasukan_lain']):
+                        if item is p:
+                            st.session_state.db['pemasukan_lain'].pop(idx)
+                            break
+                    save_data(); st.rerun()
+
     with col_out:
         st.subheader("💸 Pengeluaran")
         with st.form("pengeluaran_form"):
@@ -1085,6 +1128,24 @@ elif menu == "KEUANGAN":
                     "nom": nom_out
                 })
                 save_data(); st.rerun()
+
+        pengeluaran_bulan_ini = [
+            p for p in st.session_state.db.get('pengeluaran', [])
+            if len(p.get('tgl', '').split('/')) == 3 and p.get('tgl', '').split('/')[1] == sel_month and p.get('tgl', '').split('/')[2] == sel_year
+        ]
+        if pengeluaran_bulan_ini:
+            st.write("**Data Pengeluaran Bulan Ini**")
+            for i, p in enumerate(pengeluaran_bulan_ini):
+                po1, po2, po3, po4 = st.columns([2, 3, 2, 1])
+                po1.write(p.get('tgl', '-'))
+                po2.write(p.get('ket', '-'))
+                po3.write(format_rupiah(p.get('nom', 0)))
+                if po4.button("🗑️", key=f"hapus_pengeluaran_{sel_month}_{sel_year}_{i}_{p.get('tgl','')}"):
+                    for idx, item in enumerate(st.session_state.db['pengeluaran']):
+                        if item is p:
+                            st.session_state.db['pengeluaran'].pop(idx)
+                            break
+                    save_data(); st.rerun()
 
     st.divider()
     res1, res2, res3 = st.columns(3)
