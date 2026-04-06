@@ -1215,7 +1215,7 @@ elif menu == "KEUANGAN":
         }
 
         edited_laporan_df = st.data_editor(
-            laporan_editor_df,
+                laporan_editor_df[["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran", "Hapus"]],
             use_container_width=True,
             hide_index=True,
             disabled=["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"],
