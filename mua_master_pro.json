@@ -328,8 +328,8 @@
             ],
             "manual_list": [
                 {
-                    "nama": "Ongkir 20000",
-                    "harga": 0,
+                    "nama": "Ongkir ",
+                    "harga": 20000,
                     "qty": 1
                 }
             ],
