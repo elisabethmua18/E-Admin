@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 15,
+        "next_inv": 16,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -308,6 +308,36 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 0,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0015",
+            "nama": "Nznsnsnsmsm",
+            "tgl": "07/04/2026",
+            "wa": "838383838",
+            "alamat_mu": "Nxnznsnxm",
+            "jam_ready": "08:00-10:00",
+            "jam_otw": "07:00",
+            "durasi_otw": 30,
+            "paket_list": [
+                {
+                    "nama": "makeup wisuda+ hairdo",
+                    "qty": 1,
+                    "price": 300000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir 20000",
+                    "harga": 0,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": true,
+            "tim_type": "Hairdo",
+            "tim_nama": "Ovie",
+            "fee_tim_tambahan": 125000,
+            "dp": 100000,
             "status": "PENDING"
         }
     ],
