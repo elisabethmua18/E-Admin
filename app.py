@@ -1204,20 +1204,47 @@ elif menu == "KEUANGAN":
     if not laporan_df.empty:
         laporan_display_df = laporan_df[["Tanggal", "Keterangan", "Pemasukan", "Pengeluaran"]].copy()
 
-        header_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
-        header_cols[0].markdown("**Tanggal**")
-        header_cols[1].markdown("**Keterangan**")
-        header_cols[2].markdown("**Pemasukan**")
-        header_cols[3].markdown("**Pengeluaran**")
-        header_cols[4].markdown("**Hapus**")
+        st.markdown("""
+        <style>
+        .finance-mobile-row {
+            font-size: 12px;
+            line-height: 1.2;
+            padding-top: 6px;
+        }
+        .finance-mobile-head {
+            font-size: 11px;
+            font-weight: 700;
+            color: #8A4D62;
+            padding-bottom: 2px;
+        }
+        .finance-mobile-total {
+            font-size: 12px;
+            font-weight: 700;
+            padding-top: 6px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        header_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
+        header_cols[0].markdown('<div class="finance-mobile-head">Tanggal</div>', unsafe_allow_html=True)
+        header_cols[1].markdown('<div class="finance-mobile-head">Keterangan</div>', unsafe_allow_html=True)
+        header_cols[2].markdown('<div class="finance-mobile-head">Masuk</div>', unsafe_allow_html=True)
+        header_cols[3].markdown('<div class="finance-mobile-head">Keluar</div>', unsafe_allow_html=True)
+        header_cols[4].markdown('<div class="finance-mobile-head" style="text-align:center;">X</div>', unsafe_allow_html=True)
 
         for idx, row in laporan_df.iterrows():
-            row_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
-            row_cols[0].write(row["Tanggal"])
-            row_cols[1].write(row["Keterangan"])
-            row_cols[2].write(format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-")
-            row_cols[3].write(format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-")
-            if row_cols[4].button("🗑️", key=f"hapus_laporan_final_{sel_month}_{sel_year}_{idx}_{row.get('_source_id', '')}"):
+            row_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
+            row_cols[0].markdown(f'<div class="finance-mobile-row">{row["Tanggal"]}</div>', unsafe_allow_html=True)
+            row_cols[1].markdown(f'<div class="finance-mobile-row">{row["Keterangan"]}</div>', unsafe_allow_html=True)
+            row_cols[2].markdown(
+                f'<div class="finance-mobile-row">{format_rupiah(row["Pemasukan"]) if float(row["Pemasukan"] or 0) > 0 else "-"}</div>',
+                unsafe_allow_html=True
+            )
+            row_cols[3].markdown(
+                f'<div class="finance-mobile-row">{format_rupiah(row["Pengeluaran"]) if float(row["Pengeluaran"] or 0) > 0 else "-"}</div>',
+                unsafe_allow_html=True
+            )
+            if row_cols[4].button("🗑️", key=f"hapus_laporan_final_{sel_month}_{sel_year}_{idx}_{row.get('_source_id', '')}", use_container_width=True):
                 deleted = delete_finance_report_source(row.to_dict())
                 if deleted:
                     save_data()
@@ -1226,10 +1253,10 @@ elif menu == "KEUANGAN":
                 else:
                     st.warning("Data sumber tidak ditemukan atau sudah terhapus.")
 
-        total_cols = st.columns([1.4, 3.2, 1.8, 1.8, 1])
-        total_cols[1].markdown("**TOTAL**")
-        total_cols[2].markdown(f"**{format_rupiah(finance_data['total_pemasukan'])}**")
-        total_cols[3].markdown(f"**{format_rupiah(finance_data['total_out'])}**")
+        total_cols = st.columns([1.15, 2.35, 1.15, 1.15, 0.55], gap="small")
+        total_cols[1].markdown('<div class="finance-mobile-total">TOTAL</div>', unsafe_allow_html=True)
+        total_cols[2].markdown(f'<div class="finance-mobile-total">{format_rupiah(finance_data["total_pemasukan"])}</div>', unsafe_allow_html=True)
+        total_cols[3].markdown(f'<div class="finance-mobile-total">{format_rupiah(finance_data["total_out"])}</div>', unsafe_allow_html=True)
 
         st.write(f"**Total Pemasukan:** {format_rupiah(finance_data['total_pemasukan'])}")
         st.write(f"**Total Pengeluaran:** {format_rupiah(finance_data['total_out'])}")
