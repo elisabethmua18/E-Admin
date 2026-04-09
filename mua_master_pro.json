@@ -284,12 +284,29 @@
             "jam_ready": "08:00-10:00",
             "jam_otw": "06:45",
             "durasi_otw": 15,
-            "paket_list": [],
-            "manual_list": [],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
+            "paket_list": [
+                {
+                    "nama": "Makeup Hairdo REGULER",
+                    "qty": 1,
+                    "price": 275000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir",
+                    "harga": 25000,
+                    "qty": 1
+                },
+                {
+                    "nama": "Subal Sunggar",
+                    "harga": 15000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": true,
+            "tim_type": "Hairdo",
+            "tim_nama": "Bu Joko",
+            "fee_tim_tambahan": 150000,
             "dp": 0,
             "status": "PENDING"
         }
