@@ -251,36 +251,6 @@
             "status": "SELESAI (LUNAS)"
         },
         {
-            "inv_no": "INV0016",
-            "nama": "Ibu Yustina",
-            "tgl": "13/05/2026",
-            "wa": "‪+62 878‑7540‑2479‬",
-            "alamat_mu": "Hotel Horison Tembalang",
-            "jam_ready": "06:30-08:00",
-            "jam_otw": "07:00",
-            "durasi_otw": 15,
-            "paket_list": [
-                {
-                    "nama": "makeup wisuda+ hairdo",
-                    "qty": 1,
-                    "price": 300000
-                }
-            ],
-            "manual_list": [
-                {
-                    "nama": "Ongkir",
-                    "harga": 25000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 100000,
-            "status": "PENDING"
-        },
-        {
             "inv_no": "INV0017",
             "nama": "Kak Sari & Kak Sekar",
             "tgl": "27/04/2026",
@@ -368,6 +338,36 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 75000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0016",
+            "nama": "Ibu Yustina",
+            "tgl": "13/05/2026",
+            "wa": "‪+62 878‑7540‑2479‬",
+            "alamat_mu": "Hotel Horison Tembalang",
+            "jam_ready": "05:00-08:00",
+            "jam_otw": "07:00",
+            "durasi_otw": 15,
+            "paket_list": [
+                {
+                    "nama": "makeup wisuda+ hairdo",
+                    "qty": 1,
+                    "price": 300000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir",
+                    "harga": 25000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 100000,
             "status": "PENDING"
         }
     ],
