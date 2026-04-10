@@ -72,36 +72,6 @@
             "status": "SELESAI (LUNAS)"
         },
         {
-            "inv_no": "INV0005",
-            "nama": "Kak Alex",
-            "tgl": "11/04/2026",
-            "wa": "+62 852-3325-8820",
-            "alamat_mu": "Hotel sekitar simpang 5/ gajahmungkur",
-            "jam_ready": "04:30-06:30",
-            "jam_otw": "06:45",
-            "durasi_otw": 15,
-            "paket_list": [
-                {
-                    "nama": "makeup pendamping wisuda+ hairdo",
-                    "qty": 2,
-                    "price": 250000
-                }
-            ],
-            "manual_list": [
-                {
-                    "nama": "Ongkir (diskon 10K)",
-                    "harga": 25000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": true,
-            "tim_type": "Hairdo",
-            "tim_nama": "Kak Ovie",
-            "fee_tim_tambahan": 0,
-            "dp": 200000,
-            "status": "SELESAI (LUNAS)"
-        },
-        {
             "inv_no": "INV0004",
             "nama": "Kak Olla",
             "tgl": "11/04/2026",
@@ -369,6 +339,36 @@
             "fee_tim_tambahan": 0,
             "dp": 150000,
             "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0005",
+            "nama": "Kak Alex",
+            "tgl": "11/04/2026",
+            "wa": "+62 852-3325-8820",
+            "alamat_mu": "Front One HK Resort Simpang 5 Semarang",
+            "jam_ready": "04:30-06:30",
+            "jam_otw": "06:45",
+            "durasi_otw": 15,
+            "paket_list": [
+                {
+                    "nama": "makeup pendamping wisuda+ hairdo",
+                    "qty": 2,
+                    "price": 250000
+                }
+            ],
+            "manual_list": [
+                {
+                    "nama": "Ongkir (diskon 10K)",
+                    "harga": 25000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": true,
+            "tim_type": "Hairdo",
+            "tim_nama": "Kak Ovie",
+            "fee_tim_tambahan": 0,
+            "dp": 200000,
+            "status": "SELESAI (LUNAS)"
         }
     ],
     "pengeluaran": [
