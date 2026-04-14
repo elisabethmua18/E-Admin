@@ -371,35 +371,6 @@
             "status": "PENDING"
         },
         {
-            "inv_no": "INV0019",
-            "nama": "Kak Enik",
-            "tgl": "16/04/2026",
-            "wa": "‪+62 812‑8918‑218‬",
-            "alamat_mu": "Hotel simpang 5",
-            "jam_ready": "05:45-07:00",
-            "jam_otw": "07:00",
-            "durasi_otw": 15,
-            "paket_list": [],
-            "manual_list": [
-                {
-                    "nama": "Makeup Hijab Reguler",
-                    "harga": 225000,
-                    "qty": 1
-                },
-                {
-                    "nama": "Ongkir ",
-                    "harga": 25000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 0,
-            "status": "PENDING"
-        },
-        {
             "inv_no": "INV0018",
             "nama": "Mbak Beta",
             "tgl": "24/04/2026",
@@ -421,6 +392,35 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 0,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0019",
+            "nama": "Kak Enik",
+            "tgl": "16/04/2026",
+            "wa": "‪+62 812‑8918‑218‬",
+            "alamat_mu": "Hotel Up Peak simpang 5",
+            "jam_ready": "05:45-07:00",
+            "jam_otw": "07:00",
+            "durasi_otw": 15,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Hijab Reguler",
+                    "harga": 225000,
+                    "qty": 1
+                },
+                {
+                    "nama": "Ongkir ",
+                    "harga": 25000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 75000,
             "status": "PENDING"
         }
     ],
