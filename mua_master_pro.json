@@ -371,30 +371,6 @@
             "status": "PENDING"
         },
         {
-            "inv_no": "INV0018",
-            "nama": "Mbak Beta",
-            "tgl": "24/04/2026",
-            "wa": "+62 899-5992-001",
-            "alamat_mu": "Dirumag",
-            "jam_ready": "06:30-07:30",
-            "jam_otw": "07:45",
-            "durasi_otw": 30,
-            "paket_list": [],
-            "manual_list": [
-                {
-                    "nama": "Makeup Anak",
-                    "harga": 75000,
-                    "qty": 1
-                }
-            ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
-            "dp": 0,
-            "status": "PENDING"
-        },
-        {
             "inv_no": "INV0019",
             "nama": "Kak Enik",
             "tgl": "16/04/2026",
@@ -413,6 +389,30 @@
                 {
                     "nama": "Ongkir ",
                     "harga": 25000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 0,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0018",
+            "nama": "Mbak Beta",
+            "tgl": "24/04/2026",
+            "wa": "+62 899-5992-001",
+            "alamat_mu": "Dirumag",
+            "jam_ready": "06:00-07:00",
+            "jam_otw": "07:15",
+            "durasi_otw": 30,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Anak",
+                    "harga": 75000,
                     "qty": 1
                 }
             ],
