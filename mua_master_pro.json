@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 20,
+        "next_inv": 21,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -421,6 +421,30 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 75000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0020",
+            "nama": "Kak Marsha",
+            "tgl": "09/05/2026",
+            "wa": "+62 857-1270-7683",
+            "alamat_mu": "-",
+            "jam_ready": "04:00-07:00",
+            "jam_otw": "07:15",
+            "durasi_otw": 30,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Hijab Wisuda SMA",
+                    "harga": 200000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 100000,
             "status": "PENDING"
         }
     ],
