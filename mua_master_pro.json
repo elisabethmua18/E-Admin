@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 18,
+        "next_inv": 19,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -368,6 +368,30 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 100000,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0018",
+            "nama": "Mbak Beta",
+            "tgl": "24/04/2026",
+            "wa": "+62 899-5992-001",
+            "alamat_mu": "Dirumag",
+            "jam_ready": "06:30-07:30",
+            "jam_otw": "07:45",
+            "durasi_otw": 30,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Anak",
+                    "harga": 75000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 0,
             "status": "PENDING"
         }
     ],
