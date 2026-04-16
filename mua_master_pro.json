@@ -477,15 +477,15 @@
             "tgl": "06/06/2026",
             "wa": "+62 815-1324-2443",
             "alamat_mu": "Abimanyu",
-            "jam_ready": "05:00-07:00",
-            "jam_otw": "07:00",
+            "jam_ready": "05:30-08:00",
+            "jam_otw": "08:15",
             "durasi_otw": 30,
             "paket_list": [],
             "manual_list": [
                 {
                     "nama": "Makeup dewasa reguler ",
                     "harga": 125000,
-                    "qty": 1
+                    "qty": 2
                 },
                 {
                     "nama": "Makeup anak reguler",
