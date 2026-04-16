@@ -496,12 +496,17 @@
                     "nama": "Ongkir",
                     "harga": 25000,
                     "qty": 1
+                },
+                {
+                    "nama": "Tim hairdo hijab",
+                    "harga": 290000,
+                    "qty": 1
                 }
             ],
-            "hire_tim": false,
-            "tim_type": "-",
-            "tim_nama": "-",
-            "fee_tim_tambahan": 0,
+            "hire_tim": true,
+            "tim_type": "Hairdo",
+            "tim_nama": "Mbak Ovi",
+            "fee_tim_tambahan": 290000,
             "dp": 0,
             "status": "PENDING"
         }
