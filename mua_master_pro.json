@@ -17,7 +17,7 @@
         "no_rek": "4260445991",
         "an": "Elisabeth Febri Astuti",
         "signature": "Elisabeth MUA & Hairstylist",
-        "next_inv": 25,
+        "next_inv": 26,
         "salam": "Terimakasih telah mempercayakan momen berharga Anda ✨"
     },
     "master_layanan": {
@@ -566,6 +566,35 @@
             "tim_nama": "-",
             "fee_tim_tambahan": 0,
             "dp": 0,
+            "status": "PENDING"
+        },
+        {
+            "inv_no": "INV0025",
+            "nama": "Kak Alsa",
+            "tgl": "10/05/2026",
+            "wa": "+62 823-2792-1515",
+            "alamat_mu": "Perumahan P4",
+            "jam_ready": "03:00-05:30",
+            "jam_otw": "05:45",
+            "durasi_otw": 30,
+            "paket_list": [],
+            "manual_list": [
+                {
+                    "nama": "Makeup Reguler Dewasa",
+                    "harga": 100000,
+                    "qty": 1
+                },
+                {
+                    "nama": "Makeup Reguler Hairdo",
+                    "harga": 250000,
+                    "qty": 1
+                }
+            ],
+            "hire_tim": false,
+            "tim_type": "-",
+            "tim_nama": "-",
+            "fee_tim_tambahan": 0,
+            "dp": 50000,
             "status": "PENDING"
         }
     ],
