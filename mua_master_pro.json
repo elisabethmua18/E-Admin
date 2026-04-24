@@ -696,6 +696,11 @@
             "tgl": "20/04/2026",
             "ket": "Brush Cleaner",
             "nom": 38000
+        },
+        {
+            "tgl": "24/04/2026",
+            "ket": "Hairspray sanggul",
+            "nom": 40000
         }
     ],
     "pemasukan_lain": []
